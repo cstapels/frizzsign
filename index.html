@@ -1,0 +1,405 @@
+<html lang="en">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<body onload="setTimeout('refresh()',300);" >
+			<style>
+      body {
+         background-color: rgb(242, 211, 239);
+      }
+	  
+
+	  
+   </style>
+			<h1> LETS PLAY ULTIMATE!</h1>
+	
+	
+	<table cellpadding=5>
+		<tr>
+			<td>
+				<input type="text" class="form-control" id="postPlayerName" size ="6" placeholder="Enter name" name="player_name" style="font-size:16pt;">
+			</td>
+			<td>
+					<input type="text" class="form-control" id="postPlayerComment" size="10" placeholder="Comments" name="player_comment" style="font-size:16pt;">
+			</td>
+			
+	<!--		<td>
+						<input type="checkbox" id="early_start" value="Early Start" onclick="addComment(value,checked)">
+							<label for="early_start">Early Start</label>
+							<br>
+								<input type="checkbox" id="late_start" value="Late Arrival" onclick="addComment(value,checked)">
+									<label for="late_arrive">Late Arrival</label>
+									<br>
+										<input type="checkbox" id="old_young" value="Old V Young" onclick="addComment(value,checked)">
+											<label for="old_young">Old V Young</label>
+											
+			</td>
+		-->
+		</tr>
+		</table>
+		
+		<table>
+		<tr>
+			<td valign="top">
+												<button type="button" id="postPlayerButton" onclick="postPlayer()" class="btn btn-primary" style="font-size:14pt;color:white;background-color:green">Submit Player</button>
+			</td>
+			<td valign="top">
+												<button type="button" id="deletePlayerButton" onclick="deletePlayer()" class="btn btn-primary" style="font-size:14pt;color:white;background-color:blue">Delete Player</button>
+												<p style="font-size:12">Select player first</p>
+			</td>
+	
+
+			<td valign="top">
+													<button type="button" id="refresh" class="btn btn-secondary" onclick="refresh()" style="font-size:14pt;">Refresh</button>
+			
+													<p id="refreshNotification">
+													<div id="currentTime">0</div></p>
+			</td>
+
+		</tr>
+	</table>
+			
+<table>
+				<tr>
+				<td>
+	<h2>Count</h2>
+	</td>
+	<td width="100">
+	</td>
+	<td>
+	<div id="count_holder" style="font-size:40" >  0</div>
+	<br>
+	</td>
+	</tr>
+	</table>
+	
+	<div id="table_insert" style="font-size:28pt;" >PlayerTable </div>			
+	
+
+		<br>
+		<br>
+		
+<table>
+	<tr>
+		<td>
+		<iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
+		</td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<td>
+		<img src="img/10.jpg" id="img1" width="450" >
+		</td>
+		<td>
+	    <img  id="img2" width="450" >
+		</td>
+		</tr>
+		<tr>
+		<td>
+		<img  id="img3" width="450" >
+		</td>
+		<td>
+		<img  id="img4" width="450" >
+		</td>
+	</tr>
+	<tr>
+	</tr>
+	<tr>
+<td>
+<iframe width="450" height="260" src="https://thingspeak.com/apps/matlab_visualizations/522967"></iframe>
+</td>
+<td>
+<iframe width="450" height="260" src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>
+</td>
+</tr>
+<tr>
+<td>
+<iframe width="450" height="260" src="https://thingspeak.com/apps/matlab_visualizations/536164">
+</iframe>
+</td>
+</tr>
+	<tr>
+		<td>
+		<div id="windWeather"></div>
+		</td>
+		<td>
+		<div id="tempWeather"></div>
+		</td>
+	</tr>
+	<tr>
+		<td>
+		<a href="https://www.weatherapi.com/" title="Weather API">WeatherAPI.com</a>
+		</td>
+	</tr>
+</table>
+														
+<script>
+        function refresh() {
+            const element = document.getElementById('currentTime');
+			const d= new Date();
+			var myDay=d.getDay();
+			var bgColor= rgbToHex((50+30*myDay),225,250-myDay*30);
+			document.body.style.backgroundColor = bgColor;
+            getCount();
+
+            const currentDate = new Date();
+            element.innerText = currentDate.getHours() + ":" + currentDate.getMinutes() + ":" + currentDate.getSeconds();
+
+            document.getElementById("refreshNotification").innerHTML = "refresh complete"
+            // setTimeout(function() { document.getElementById("refreshNotification").innerHTML = ""; }, 3000);
+			document.getElementById("deletePlayerButton").disabled = true;
+			displayRandomImage("img1");
+			displayRandomImage("img2");
+			displayRandomImage("img3");
+			displayRandomImage("img4");
+        }
+    </script>
+														<script>
+        function postPlayer() {
+		var api_key = "2TAONI92GENB80T5";
+		//var api_key = "J479K990E44B85BQ"; //test key
+		
+            var name = document.getElementById("postPlayerName").value;
+            var comment = document.getElementById("postPlayerComment").value;
+			//var currentCount=document.getElementById("count_holder").value;
+			
+			// const currentDate = new Date();
+            //var uniqueID= parseInt(currentDate.getYear())+currentDate.getMonth()+currentDate.getDay()+currentCount; 
+
+			
+            if (name === "") {
+                alert("Please enter the player name");
+            } else {
+                var xhr = new XMLHttpRequest();
+                var myUrl = "https://api.thingspeak.com/update.json?api_key=" + api_key + "&field1=1&field2=" + name + "&field3=" + comment;
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        //alert(xhr.response);
+                    }
+                }
+
+                xhr.open('get', myUrl, true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+                xhr.send();
+
+                updateMessage();
+
+            }
+        }
+function componentToHex(c) {
+  var hex = c.toString(16);
+  return hex.length == 1 ? "0" + hex : hex;
+}		
+function rgbToHex(r, g, b) {
+  return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+        function resetList() {
+            var name = document.getElementById("postPlayerName").value;
+            if (name === "") {
+                alert("Please enter the player name so we know who did the reset");
+            } else {
+                var xhr = new XMLHttpRequest();
+                var myUrl = "https://api.thingspeak.com/update.json?api_key=2TAONI92GENB80T5&field1=0&field2=" + name;
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+
+                    }
+                }
+
+                xhr.open('get', myUrl, true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+                xhr.send();
+                updateMessage();
+            }
+        }
+
+
+        function deletePlayer() {
+				var api_key = "2TAONI92GENB80T5";  
+		//var api_key = "J479K990E44B85BQ"; //test key
+            var name = document.getElementById("postPlayerName").value;
+            var comment = document.getElementById("postPlayerComment").value;
+			var playerNum = 0;
+			
+					var delRadios=	document.getElementsByName("playerRadio");	
+		            for(i = 0; i < delRadios.length; i++) {
+                if(delRadios[i].checked)
+               playerNum = i+1;
+            }
+			
+			
+			
+            if (playerNum === 0) {
+                alert("Please check the box by the player name to delete");
+            } else {
+                var xhr = new XMLHttpRequest();
+                var myUrl = "https://api.thingspeak.com/update.json?api_key=2TAONI92GENB80T5&field1=-1&field2=delete&field3=delete&field4=" + playerNum;
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        //alert(xhr.response);
+                    }
+                }
+                xhr.open('get', myUrl, true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+                xhr.send();
+
+            }
+            updateMessage();
+			playerNum = 0; //reset so they cant delete a player twice
+        }
+
+
+function getCount() {
+var channelID=1970388; 
+//var channelID=1771583; //test id
+var xhr = new XMLHttpRequest();
+const currentDate = new Date();
+var minutes;
+let players = [];
+
+minutes = 60 * (parseInt(currentDate.getHours())+1) + Math.floor(Math.random() * 14);
+
+
+var url = "https://api.thingspeak.com/channels/" + channelID + "/feeds.json?minutes=" + minutes;
+
+xhr.onreadystatechange = function () {
+	if (this.readyState == 4 && this.status == 200) {
+		const obj = JSON.parse(xhr.responseText);
+		var i = 0;
+		var sumPlayers = 0;
+		var namePlayers = "";
+		var currentPlayer = 0;
+		var commentList = "";
+		var currentComment = '';
+		var radioList = '';
+		var deletePlayerNumber=0;
+		var wholeTable="<table border=1 bordercolor='green' cellspacing=0 cellpadding=5 ><tr><td width='65'>#</td><td width='200'>Players</td><td width='500'>Comment</td>";
+		
+
+//list 2
+	for (var index = 0; index < obj.feeds.length; index++) {
+			currentPlayer = parseInt(obj.feeds[i].field1);
+			currentPlayerName = obj.feeds[i].field2; 
+			deletePlayerNumber = obj.feeds[i].field4; 
+			currentComment = obj.feeds[i].field3 + " ";
+			if (currentComment == "null ") {
+				currentComment = " ";
+			}
+			
+			if (currentPlayer == 1) {
+			sumPlayers++;
+			let player={
+			"PlayerNumber":sumPlayers,
+			"PlayerName":currentPlayerName,
+			"PlayerComment":currentComment,
+			//"PlayerRadio":"<input type='radio' id='playerRadio' name='playerRadio' value=" + String(sumPlayers) +">"+ String(sumPlayers)
+						}
+			players.push(player);
+			//radioList+= "	<input type='radio' id='playerRadio' name='playerRadio' value=" + String(sumPlayers) +">"+ String(index+1) + "	<br> ";
+		   
+									}
+									
+			if (currentPlayer == 0) { //reset the count
+				sumPlayers = 0;
+				players=[];
+
+			}
+			if (currentPlayer == -1) {
+			sumPlayers--;
+			players.splice(deletePlayerNumber-1,1);
+									}
+			i++;
+															}
+
+}
+//need to build the player and comment list
+for (p=0;p<players.length; p++){
+//players.forEach((element) => {
+wholeTable+="<tr><td><input type='radio' id='playerRadio' name='playerRadio' onclick= 'allowDelete()' value=" + String(p+1) +">"+ String(p+1) + " </td> ";
+wholeTable+="<td> " + players[p].PlayerName + " </td> ";
+wholeTable+="<td> " + players[p].PlayerComment + " </td></tr> "
+
+namePlayers += players[p].PlayerName + " <br> ";
+commentList += players[p].PlayerComment + " <br> ";
+radioList += "<input type='radio' id='playerRadio' name='playerRadio' onclick= 'allowDelete()' value=" + String(p+1) +">"+ String(p+1) + " <br> ";
+								}
+								wholeTable+="</table>";
+				
+              //  document.getElementById("name_list").innerHTML = namePlayers;
+                document.getElementById("count_holder").innerHTML = sumPlayers;
+              //  document.getElementById("comment_holder").innerHTML = commentList;
+			//	document.getElementById("radio_list").innerHTML = radioList;
+				document.getElementById("table_insert").innerHTML = wholeTable;
+							}
+
+            xhr.open('get', url, true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8', 'Cache-Control', 'max-age=0');
+            xhr.send();
+        }
+
+function addComment(myValue, myChecked) {
+	if (myChecked) {
+		var comment = document.getElementById("postPlayerComment").value;
+
+		var newComment = comment + myValue + " ";
+
+		document.getElementById("postPlayerComment").value = newComment;
+	}
+}
+
+function allowDelete(){
+document.getElementById("deletePlayerButton").disabled = false;
+}
+
+function displayRandomImage(imgId) {
+  // Get the div element by ID
+  const imageElement = document.getElementById(imgId);
+
+
+
+  // Define the path to the directory containing the images
+  const directoryPath = 'img/';
+
+  
+      // Randomly select an image file name
+      const randomFileName = directoryPath + "f" +[Math.floor(Math.random() * 200.0)+1]+".jpg";
+
+      // Create an image element and set its source to the randomly selected file
+      //const imageElement = document.createElement('img');
+      imageElement.src = randomFileName;
+    }
+
+
+
+
+
+function updateRefresh() {
+	var refreshMessage = document.getElementById("refreshNotification");
+
+	refreshMessage.innerHTML = "Refresh complete";
+	refreshMessage.style.color = "";
+		var myButton=document.getElementById("postPlayerButton");
+	myButton.disabled=false;
+}
+
+function updateMessage() {
+	var refreshMessage = document.getElementById("refreshNotification");
+	refreshMessage.innerHTML = "UPDATING";
+	refreshMessage.style.color = "red";
+	var myButton=document.getElementById("postPlayerButton");
+	myButton.disabled=true;
+	setTimeout(function () {
+		getCount();
+	}, 3000);
+	setTimeout(function () {
+		updateRefresh();
+	}, 3000);
+	
+}
+    
+																						</script>
+																					</body>
+																				</html>

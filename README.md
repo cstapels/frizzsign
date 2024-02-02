@@ -8,7 +8,12 @@ Delete player is inactive until a player radio is selected.  TODO make sure dele
 
 
 Wish list
+
 Better weather data
+
 Look at previous days
+
 sign up for a future day
+
 let everyone know all conditionals have been met
+

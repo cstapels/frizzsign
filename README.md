@@ -17,3 +17,5 @@ sign up for a future day
 
 let everyone know all conditionals have been met
 
+comment without sign up
+

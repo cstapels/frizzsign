@@ -19,3 +19,5 @@ let everyone know all conditionals have been met
 
 comment without sign up
 
+Checkboxes for the 3 most common playing criteria (in w/: 8, 10, 12). The default is in with 6, so no need to use a checkbox if you are willing to play with 6.
+

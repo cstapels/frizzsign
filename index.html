@@ -133,7 +133,7 @@
 		const currentDate = new Date();
 		let players = [];
 
-		const minutes = 60 * (parseInt(currentDate.getHours())+1) + Math.floor(Math.random() * 14);
+		const minutes = 60 * (parseInt(currentDate.getHours())+1);
 
 
 		const url = "https://api.thingspeak.com/channels/" + PLAYER_CHANNEL_ID + "/feeds.json?minutes=" + minutes;
@@ -206,6 +206,15 @@
     	});
 	}
 
+	function countReached(playerData, minCount) {
+		if (minCount === 0) {
+			return true
+		} else {
+			// filter list to players who will play with the given minimum
+			return playerData.filter((p) => p.MinPlayers <= minCount).length >= minCount;
+		}
+	}
+
 	function updatePlayerCountTable(playerData) {
 		// Empty table body first
 		const playerCountTableBody = document.getElementById("playerCountTableBody");
@@ -224,7 +233,7 @@
 			playerTr.innerHTML = htmlRow;
 			
 			// Warn if player's min count has not been reached
-			if (playerData[p].MinPlayers > numPlayers){
+			if (!countReached(playerData, playerData[p].MinPlayers)){
 				playerTr.classList.add('table-warning');
 				atRiskPlayers += 1;
 			}

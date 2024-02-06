@@ -13,10 +13,10 @@
 	<form>
 		<div class="row">
 			<div class="col">
-			  <input id="playerNameInput" type="text" class="form-control" placeholder="Name" aria-label="Player Name" style="width: 285px">
+			  <input id="playerNameInput" type="text" class="form-control" placeholder="Name" aria-label="Player Name" style="width: 285px;">
 			</div>
 			<div class="col">
-			  <input id="playerCommentInput" type="text" class="form-control" placeholder="Comments" aria-label="Comments" style="width: 345px">
+			  <input id="playerCommentInput" type="text" class="form-control" placeholder="Comments" aria-label="Comments" style="width: 345px;">
 			</div>
 
 			<div class="col">
@@ -43,13 +43,15 @@
 	</form>
 	<br>
 	<h1 id="playerCountHeading"><span id="playerCountHeadingBadge" class="badge text-bg-warning">At Risk</span> Count: 0</h1>
-	
-	<table id="playerCountTable" class="table table-bordered">
+			<div class="row">
+			<div class="col">
+			
+	<table id="playerCountTable" class="table table-bordered" style="padding: 0px;spacing:0px;width:800px;">
 		<thead>
 		  <tr>
-			<th scope="col">#</th>
-			<th scope="col">Player</th>
-			<th scope="col">Comments</th>
+			<th scope="col" style="padding: 0px;spacing:0px;width:12px;">#</th>
+			<th scope="col" style="padding: 0px;spacing:0px;width:120px;">Player</th>
+			<th scope="col" style="padding: 0px;spacing:0px;width:220px;">Comments</th>
 		  </tr>
 		</thead>
 		<tbody id="playerCountTableBody">
@@ -57,11 +59,11 @@
 	  </table>
 
 	<div class="row">
-		<div class="col">
+		<div class="col-2">
 			<button id="refreshTableButton" type="button" class="btn btn-secondary" onclick="refreshCountTable()">Refresh</button>
 			<label id="lastUpdatedLabel" for="refreshTableButton">Last updated: never</label>
 		</div>
-		<div class="col">
+		<div class="col-4">
 			<div class="input-group">
 				<select id="removePlayerDropdown" class="form-select" aria-label="Remove Player">
 					<option selected disabled>Select Player</option>		
@@ -70,10 +72,11 @@
 			</div>
 		</div>
 	</div>
+	</div> <!-- end of col for table holder-->
 
 	<br>
 	<br>
-	<div class="row">
+<!--	<div class="row"> -->
 	<div class="col">
 	<div class="carousel slide" data-bs-ride="carousel" style="width: 380px">
 		<div id="carouselItems" class="carousel-inner">
@@ -87,12 +90,13 @@
 		  <span class="visually-hidden">Next</span>
 		</button>
 	  </div>
-	  </div>
-	  <div class="col">
+	<br>
+	<br>
 			<iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
 		</div>
 	  </div>
-	  
+	  	  </div> <!--end of row with table-->
+		  
 	<h1>Stats</h1>
 	<div class="row">
 		

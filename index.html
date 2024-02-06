@@ -211,6 +211,15 @@
     	});
 	}
 
+	function countReached(playerData, minCount) {
+		if (minCount === 0) {
+			return true
+		} else {
+			// filter list to players who will play with the given minimum
+			return playerData.filter((p) => p.MinPlayers <= minCount).length >= minCount;
+		}
+	}
+
 	function updatePlayerCountTable(playerData) {
 		// Empty table body first
 		const playerCountTableBody = document.getElementById("playerCountTableBody");
@@ -229,7 +238,7 @@
 			playerTr.innerHTML = htmlRow;
 			
 			// Warn if player's min count has not been reached
-			if (playerData[p].MinPlayers > numPlayers){
+			if (!countReached(playerData, playerData[p].MinPlayers)){
 				playerTr.classList.add('table-warning');
 				atRiskPlayers += 1;
 			}

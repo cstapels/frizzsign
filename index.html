@@ -221,8 +221,8 @@
 	}
 
 	function countReached(playerData, minCount) {
-		// Sort playerData by Minimum players, in ascending order. 
-		const sortedPlayerData = playerData.sort((a,b) => a.MinPlayers - b.MinPlayers);
+		// Sort playerData by Minimum players, in ascending order (make a copy first)
+		const sortedPlayerData = [...playerData].sort((a,b) => a.MinPlayers - b.MinPlayers);
 
 		let guaranteedPlayers = 0;
 

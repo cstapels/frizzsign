@@ -1,9 +1,10 @@
 
 
 name: Push to S3
-
-on: [push]
-
+on:
+  push:
+    paths-ignore:
+      - 'img/**'
 jobs:
   deploy:
     runs-on: ubuntu-latest

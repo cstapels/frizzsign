@@ -217,12 +217,21 @@
 	}
 
 	function countReached(playerData, minCount) {
-		if (minCount === 0) {
-			return true
-		} else {
-			// filter list to players who will play with the given minimum
-			return playerData.filter((p) => p.MinPlayers <= minCount).length >= minCount;
+		// Sort playerData by Minimum players, in ascending order. 
+		const sortedPlayerData = playerData.sort((a,b) => a.MinPlayers - b.MinPlayers);
+
+		let guaranteedPlayers = 0;
+
+		// Loop over player list backward. Stop when we hit a player that is guaranteed to play
+		// That player and every player above is guaranteed
+		for (let p = sortedPlayerData.length - 1; p >= 0; p--) {
+			if (sortedPlayerData[p].MinPlayers <= p + 1 ) {
+				guaranteedPlayers =  p + 1;
+				break;
+			}
 		}
+
+		return guaranteedPlayers >= minCount;
 	}
 
 	function updatePlayerCountTable(playerData) {

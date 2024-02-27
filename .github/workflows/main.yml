@@ -3,6 +3,8 @@
 name: Push to S3
 on:
   push:
+    branches:
+      - 'main'
     paths-ignore:
       - 'img/**'
 jobs:

@@ -29,6 +29,7 @@
 			<br>
 		</div>
 
+<!--
 		<div class ="alert alert-primary" role="alert">
 			Cognex Ultimate Tournament is June 10th-14th!
 			<table>
@@ -44,7 +45,7 @@
 			</tr>
 			</table>
 		</div>
-
+-->
 		<!-- Sign up form fields and buttons -->
 		<div class="row">
 			<div class="col-md-3">
@@ -115,7 +116,7 @@
 			</div>
 
 			<div class="col-md-4 p-2">
-				<div class="carousel slide" data-bs-ride="carousel">
+				<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
 					<div id="carouselItems" class="carousel-inner">
 					</div>
 					<button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
@@ -430,7 +431,7 @@
 		const carouselParent = document.getElementById("carouselItems");
 
 		let imgNums = [];
-		for (let i = 1; i<=30; i++) {
+		for (let i = 30; i<=46; i++) {
 			imgNums.push(i);
 		}
 		imgNums = shuffle(imgNums);

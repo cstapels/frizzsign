@@ -5,8 +5,7 @@ on:
   push:
     branches:
       - 'main'
-    paths-ignore:
-      - 'img/**'
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,4 +20,4 @@ jobs:
           aws-region: us-east-1
       - name: Sync files to S3 bucket
         run: |
-          aws s3 sync ./ s3://frisbeeapp --exclude 'img/*'
+          aws s3 sync ./ s3://frisbeeapp --size-only

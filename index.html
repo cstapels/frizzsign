@@ -394,6 +394,9 @@
 	}
 
 	async function addPlayer(name, comment) {
+		name=encodeURIComponent(name);
+		comment=encodeURIComponent(comment);
+	
 		const addPlayerUrl = `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=1&field2=${name}&field3=${comment}`;
 		return makeRequest("GET", addPlayerUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 	}

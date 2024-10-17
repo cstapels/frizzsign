@@ -26,7 +26,9 @@
 			<br>
 			LETS PLAY ULTIMATE! </h2>
 			</div>
-			 <button id="toggleButton">See Game Info</button>
+    <div style="text-align: right;">
+        <button id="toggleButton">See Game Info</button>
+    </div>
 			<div id="expandable">
 			<p><b>What</b>:  A daily pick-up game hosted by the employees of Cognex Corporation on the main campus on two permanently lined fields.
 			<br>
@@ -40,7 +42,7 @@
 			<br>
 			<br>
 		</div>
-   
+   <br> <br>
    
 <!--
 		<div class ="alert alert-primary" role="alert">
@@ -100,10 +102,10 @@
 				</div>
 			</div>
 		</div>
+		<br>
     <div id="weather-info">
         Loading weather data...
     </div>
-<br>
     <script src="weather.js"></script>
 
 		<br>
@@ -503,11 +505,18 @@
 
             if (!getCookie("expanded")) {
                 expandable.classList.add("expanded");
-                setCookie("expanded", "true", 365);
+                setCookie("expanded", "false", 365);
+				console.log(document.cookie); // Log cookies to see if it's set
             }
 
             toggleButton.addEventListener("click", function() {
                 expandable.classList.toggle("expanded");
+				            // Change the button text based on the expanded state
+            if (expandable.classList.contains("expanded")) {
+                toggleButton.textContent = "Hide Game Info";
+            } else {
+                toggleButton.textContent = "See Game Info";
+            }
             });
         });
     </script>

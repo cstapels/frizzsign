@@ -15,7 +15,7 @@
         }
 		
     </style>
-	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	    <!--<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>-->
 	</head>
 
 	<body style="padding: 20px;">
@@ -160,6 +160,7 @@
 		    <h1>Top 10 Players</h1>
 
     <!-- Dropdown for selecting days -->
+	<!--
     <label for="daysSelector">Select number of days:</label>
     <select id="daysSelector" onchange="fetchData()">
         <option value="7">7 Days</option>
@@ -171,7 +172,7 @@
 <div class="row">
     <canvas id="playerChart" width="400" height="200"></canvas>
 </div>
-		
+		-->
 		<div class="row">
 			<div class="col">
 				<iframe width="480" height="270" src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>	
@@ -531,7 +532,7 @@
             });
         });
     </script>
-	
+	<!--
 	    <script>
         let playerChart;
 
@@ -650,5 +651,5 @@ function updateChart(playerCounts) {
         // Initial fetch for the default selection (7 days)
         window.onload = fetchData;
     </script>
-	
+	-->
 </html>

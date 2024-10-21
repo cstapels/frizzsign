@@ -13,7 +13,9 @@
         #expandable.expanded {
             display: block;
         }
+		
     </style>
+	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	</head>
 
 	<body style="padding: 20px;">
@@ -155,18 +157,27 @@
 		<br>
 		<!-- Stats and Visualizations -->
 		<h1>Stats</h1>
+		    <h1>Top 10 Players</h1>
+
+    <!-- Dropdown for selecting days -->
+    <label for="daysSelector">Select number of days:</label>
+    <select id="daysSelector" onchange="fetchData()">
+        <option value="7">7 Days</option>
+        <option value="14">14 Days</option>
+		<option value="30">30 Days</option>
+        <option value="90">90 Days</option>
+        <option value="all">All (since Sep 2, 2023)</option>
+    </select>
+<div class="row">
+    <canvas id="playerChart" width="400" height="200"></canvas>
+</div>
+		
 		<div class="row">
 			<div class="col">
-				<iframe width="480" height="270" style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
+				<iframe width="480" height="270" src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>	
 			</div>
 			<div class="col">
-				<iframe width="480" height="270" src="https://thingspeak.com/apps/matlab_visualizations/522967"></iframe>
-			</div>
-			<div class="col">
-				<iframe width="480" height="270" src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>
-			</div>
-			<div class="col">
-				<iframe width="480" height="270" src="https://thingspeak.com/apps/matlab_visualizations/536164"></iframe>
+			<iframe width="480" height="270" style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
 			</div>
 		</div>
 
@@ -200,7 +211,7 @@
 	}
 
 	async function getPlayerData() {
-		const xhr = new XMLHttpRequest();
+		//const xhr = new XMLHttpRequest();
 		const currentDate = new Date();
 		let players = [];
 
@@ -520,4 +531,124 @@
             });
         });
     </script>
+	
+	    <script>
+        let playerChart;
+
+        // Function to fetch data based on user selection
+        function fetchData() {
+            const daysSelector = document.getElementById("daysSelector");
+            let days = daysSelector.value;
+
+            if (days === 'all') {
+                // Calculate number of days from September 2, 2023 to today
+                const startDate = new Date('2023-09-02');
+                const today = new Date();
+                const diffTime = Math.abs(today - startDate);
+                days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));  // Total days since Sep 2, 2023
+            }
+
+            const url = `https://api.thingspeak.com/channels/1970388/feed.json?days=${days}`;
+            const method = 'GET';
+
+            // XMLHttpRequest method
+            let xhr = new XMLHttpRequest();
+            xhr.open(method, url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    const playerCounts = countPlayers(response.feeds);
+                    updateChart(playerCounts);
+                }
+            };
+            xhr.onerror = function () {
+                console.error('Error fetching data');
+            };
+            xhr.send();
+        }
+
+        // Function to count players (case insensitive)
+        function countPlayers(feeds) {
+            const playerCounts = {};
+            const deletions = [];
+
+            feeds.forEach(entry => {
+                if (entry.field1 === "1") {
+                    const playerName = entry.field2 ? entry.field2.toLowerCase() : null;  // Convert to lowercase for case insensitivity
+                    if (playerName) {
+                        if (playerCounts[playerName]) {
+                            playerCounts[playerName] += 1;
+                        } else {
+                            playerCounts[playerName] = 1;
+                        }
+                    }
+                } else if (entry.field1 === "-1" && entry.field4) {
+                    deletions.push(parseInt(entry.field4));
+                }
+            });
+
+            // Process deletions
+            deletions.forEach(deletedEntryId => {
+                const entryToDelete = feeds.find(entry => entry.entry_id === deletedEntryId);
+                if (entryToDelete) {
+                    const playerNameToDelete = entryToDelete.field2.toLowerCase();  // Case insensitive delete
+                    const createdAtDate = new Date(entryToDelete.created_at).toISOString().split('T')[0];
+                    const todayDate = new Date().toISOString().split('T')[0];
+                    if (createdAtDate === todayDate && playerCounts[playerNameToDelete]) {
+                        playerCounts[playerNameToDelete] -= 1;
+                        if (playerCounts[playerNameToDelete] <= 0) {
+                            delete playerCounts[playerNameToDelete];
+                        }
+                    }
+                }
+            });
+
+            return playerCounts;
+        }
+
+       // Function to update the chart
+function updateChart(playerCounts) {
+    // Sort and get top 20 players
+    const sortedPlayers = Object.entries(playerCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20);  // Get top 20 players
+
+    const playerNames = sortedPlayers.map(player => player[0].charAt(0).toUpperCase() + player[0].slice(1));  // Capitalize first letter
+    const playerCountsData = sortedPlayers.map(player => player[1]);
+
+    // If the chart already exists, destroy it before creating a new one
+    if (playerChart) {
+        playerChart.destroy();
+    }
+
+    const ctx = document.getElementById('playerChart').getContext('2d');
+    playerChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: playerNames,
+            datasets: [{
+                label: 'Player Count',
+                data: playerCountsData,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+				barThickness: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',  // Switch the axis to display names on the y-axis (left)
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+
+        // Initial fetch for the default selection (7 days)
+        window.onload = fetchData;
+    </script>
+	
 </html>

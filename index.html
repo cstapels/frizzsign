@@ -580,44 +580,50 @@ canvas {
             xhr.send();
         }
 
-        // Function to count players (case insensitive)
-        function countPlayers(feeds) {
-            const playerCounts = {};
-            const deletions = [];
+       
 
-            feeds.forEach(entry => {
-                if (entry.field1 === "1") {
-                    const playerName = entry.field2 ? entry.field2.toLowerCase() : null;  // Convert to lowercase for case insensitivity
-                    if (playerName) {
-                        if (playerCounts[playerName]) {
-                            playerCounts[playerName] += 1;
-                        } else {
-                            playerCounts[playerName] = 1;
-                        }
-                    }
-                } else if (entry.field1 === "-1" && entry.field4) {
-                    deletions.push(parseInt(entry.field4));
-                }
-            });
+// Function to process entries
+function countPlayers(entries) {
+  const playerOccurrences = {};
 
-            // Process deletions
-            deletions.forEach(deletedEntryId => {
-                const entryToDelete = feeds.find(entry => entry.entry_id === deletedEntryId);
-                if (entryToDelete) {
-                    const playerNameToDelete = entryToDelete.field2.toLowerCase();  // Case insensitive delete
-                    const createdAtDate = new Date(entryToDelete.created_at).toISOString().split('T')[0];
-                    const todayDate = new Date().toISOString().split('T')[0];
-                    if (createdAtDate === todayDate && playerCounts[playerNameToDelete]) {
-                        playerCounts[playerNameToDelete] -= 1;
-                        if (playerCounts[playerNameToDelete] <= 0) {
-                            delete playerCounts[playerNameToDelete];
-                        }
-                    }
-                }
-            });
+  // Group entries by date
+  const groupedByDate = entries.reduce((acc, entry) => {
+    const date = entry.created_at.split('T')[0]; // Get the date part
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(entry);
+    return acc;
+  }, {});
 
-            return playerCounts;
-        }
+  // Process each day's entries
+  for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
+    const dailyPlayers = [];
+
+    dailyEntries.forEach(entry => {
+      const playerName = entry.field2 ? entry.field2.toLowerCase() : null; // Convert to lowercase if not null
+      const playerToRemove = entry.field4 ? entry.field4.toLowerCase() : null; // Convert to lowercase if not null
+
+
+      if (entry.field1 !== '-1') {
+        dailyPlayers.push(playerName);
+      } else {
+        
+          dailyPlayers.splice(playerToRemove-1, 1);
+        
+      }
+    });
+
+    // Count occurrences of each player name
+    dailyPlayers.forEach(player => {
+      if (!playerOccurrences[player]) {
+        playerOccurrences[player] = 0;
+      }
+      playerOccurrences[player]++;
+    });
+  }
+
+  return playerOccurrences;
+}
+       
 
        // Function to update the chart
 function updateChart(playerCounts) {

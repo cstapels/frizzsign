@@ -13,6 +13,18 @@
         #expandable.expanded {
             display: block;
         }
+	.row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 400px;
+}
 		
     </style>
 	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -157,7 +169,7 @@
 		<br>
 		<!-- Stats and Visualizations -->
 		<h1>Stats</h1>
-		    <h1>Top 10 Players</h1>
+		    <h1>Most Freq 20 Players</h1>
 
     <!-- Dropdown for selecting days -->
 	
@@ -170,15 +182,15 @@
         <option value="all">All (since Sep 2, 2023)</option>
     </select>
 <div class="row">
-    <canvas id="playerChart" width="400" height="200"></canvas>
+    <canvas id="playerChart" width="1000"  height="800"></canvas>
 </div>
 	
 		<div class="row">
 			<div class="col">
-				<iframe width="480" height="270" src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>	
+				<iframe  src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>	
 			</div>
 			<div class="col">
-			<iframe width="480" height="270" style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
+			<iframe style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
 			</div>
 		</div>
 
@@ -568,44 +580,50 @@
             xhr.send();
         }
 
-        // Function to count players (case insensitive)
-        function countPlayers(feeds) {
-            const playerCounts = {};
-            const deletions = [];
+       
 
-            feeds.forEach(entry => {
-                if (entry.field1 === "1") {
-                    const playerName = entry.field2 ? entry.field2.toLowerCase() : null;  // Convert to lowercase for case insensitivity
-                    if (playerName) {
-                        if (playerCounts[playerName]) {
-                            playerCounts[playerName] += 1;
-                        } else {
-                            playerCounts[playerName] = 1;
-                        }
-                    }
-                } else if (entry.field1 === "-1" && entry.field4) {
-                    deletions.push(parseInt(entry.field4));
-                }
-            });
+// Function to process entries
+function countPlayers(entries) {
+  const playerOccurrences = {};
 
-            // Process deletions
-            deletions.forEach(deletedEntryId => {
-                const entryToDelete = feeds.find(entry => entry.entry_id === deletedEntryId);
-                if (entryToDelete) {
-                    const playerNameToDelete = entryToDelete.field2.toLowerCase();  // Case insensitive delete
-                    const createdAtDate = new Date(entryToDelete.created_at).toISOString().split('T')[0];
-                    const todayDate = new Date().toISOString().split('T')[0];
-                    if (createdAtDate === todayDate && playerCounts[playerNameToDelete]) {
-                        playerCounts[playerNameToDelete] -= 1;
-                        if (playerCounts[playerNameToDelete] <= 0) {
-                            delete playerCounts[playerNameToDelete];
-                        }
-                    }
-                }
-            });
+  // Group entries by date
+  const groupedByDate = entries.reduce((acc, entry) => {
+    const date = entry.created_at.split('T')[0]; // Get the date part
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(entry);
+    return acc;
+  }, {});
 
-            return playerCounts;
-        }
+  // Process each day's entries
+  for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
+    const dailyPlayers = [];
+
+    dailyEntries.forEach(entry => {
+      const playerName = entry.field2 ? entry.field2.toLowerCase() : null; // Convert to lowercase if not null
+      const playerToRemove = entry.field4 ? entry.field4.toLowerCase() : null; // Convert to lowercase if not null
+
+
+      if (entry.field1 !== '-1') {
+        dailyPlayers.push(playerName);
+      } else {
+        
+          dailyPlayers.splice(playerToRemove-1, 1);
+        
+      }
+    });
+
+    // Count occurrences of each player name
+    dailyPlayers.forEach(player => {
+      if (!playerOccurrences[player]) {
+        playerOccurrences[player] = 0;
+      }
+      playerOccurrences[player]++;
+    });
+  }
+
+  return playerOccurrences;
+}
+       
 
        // Function to update the chart
 function updateChart(playerCounts) {
@@ -633,11 +651,13 @@ function updateChart(playerCounts) {
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 1,
-				barThickness: 8
+				barThickness: 6
             }]
         },
         options: {
-            indexAxis: 'y',  // Switch the axis to display names on the y-axis (left)
+                responsive: true,
+
+		indexAxis: 'y',  // Switch the axis to display names on the y-axis (left)
             scales: {
                 x: {
                     beginAtZero: true

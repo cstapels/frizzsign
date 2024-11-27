@@ -16,7 +16,6 @@
 	.row {
     display: flex;
     flex-direction: column;
-    align-items: center;
     width: 100%;
 }
 
@@ -25,6 +24,33 @@ canvas {
     height: auto !important;
     max-width: 400px;
 }
+
+	.top-players-list {
+        list-style-type: none; /* Removes bullets */
+        padding: 0;           /* Removes padding */
+        margin: 0;            /* Removes margin */
+	width: 40%
+    }
+
+    .top-players-list li {
+        display: flex;        /* Enables flexible layout */
+        justify-content: space-between; /* Spreads columns evenly */
+        padding: 1px 0;      /* Adds spacing between items */
+        border-bottom: 1px solid #ccc; /* Adds a line below each item */
+    }
+
+    .top-players-list li:last-child {
+        border-bottom: none; /* Removes the line below the last item */
+    }
+
+    .top-players-list li span {
+        flex: 1;             /* Ensures columns take equal width */
+        text-align: left;    /* Aligns text to the left */
+    }
+
+    .top-players-list li span.count {
+        flex: 0.3;           /* Adjusts the width of the count column */
+    }
 		
     </style>
 	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -181,8 +207,9 @@ canvas {
         <option value="90">90 Days</option>
         <option value="all">All (since Sep 2, 2023)</option>
     </select>
-<div class="row">
-    <canvas id="playerChart" width="1000"  height="800"></canvas>
+<div>
+    <h3>Top Players</h3>
+    <ul id="topPlayersList" class="top-players-list"></ul>
 </div>
 	
 		<div class="row">
@@ -623,49 +650,76 @@ function countPlayers(entries) {
 
   return playerOccurrences;
 }
-       
 
-       // Function to update the chart
-function updateChart(playerCounts) {
+
+       
+// Function to update the list
+function updateList(playerCounts) {
     // Sort and get top 20 players
     const sortedPlayers = Object.entries(playerCounts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 20);  // Get top 20 players
+        .slice(0, 20); // Get top 20 players
 
-    const playerNames = sortedPlayers.map(player => player[0].charAt(0).toUpperCase() + player[0].slice(1));  // Capitalize first letter
-    const playerCountsData = sortedPlayers.map(player => player[1]);
+    // Update the HTML list
+    const listContainer = document.getElementById('topPlayersList');
+    listContainer.innerHTML = ''; // Clear existing list
 
-    // If the chart already exists, destroy it before creating a new one
-    if (playerChart) {
-        playerChart.destroy();
-    }
+    sortedPlayers.forEach(([playerName, count], index) => {
+        const capitalizedPlayerName = playerName.charAt(0).toUpperCase() + playerName.slice(1);
+        const listItem = document.createElement('li');
 
-    const ctx = document.getElementById('playerChart').getContext('2d');
-    playerChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: playerNames,
-            datasets: [{
-                label: 'Player Count',
-                data: playerCountsData,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-				barThickness: 6
-            }]
-        },
-        options: {
-                responsive: true,
+        // Create name column
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = capitalizedPlayerName;
 
-		indexAxis: 'y',  // Switch the axis to display names on the y-axis (left)
-            scales: {
-                x: {
-                    beginAtZero: true
-                }
-            }
-        }
+        // Create count column
+        const countSpan = document.createElement('span');
+        countSpan.textContent = count;
+        countSpan.classList.add('count');
+
+        // Append spans to the list item
+        listItem.appendChild(nameSpan);
+        listItem.appendChild(countSpan);
+
+        // Add list item to the container
+        listContainer.appendChild(listItem);
     });
 }
+
+// Function to fetch data based on user selection
+function fetchData() {
+    const daysSelector = document.getElementById("daysSelector");
+    let days = daysSelector.value;
+
+    if (days === 'all') {
+        // Calculate number of days from September 2, 2023 to today
+        const startDate = new Date('2023-09-02');
+        const today = new Date();
+        const diffTime = Math.abs(today - startDate);
+        days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Total days since Sep 2, 2023
+    }
+
+    const url = `https://api.thingspeak.com/channels/1970388/feed.json?days=${days}`;
+    const method = 'GET';
+
+    // XMLHttpRequest method
+    let xhr = new XMLHttpRequest();
+    xhr.open(method, url, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            const playerCounts = countPlayers(response.feeds);
+            updateList(playerCounts);
+        }
+    };
+    xhr.onerror = function () {
+        console.error('Error fetching data');
+    };
+    xhr.send();
+}
+
+
+
 
 
         // Initial fetch for the default selection (7 days)

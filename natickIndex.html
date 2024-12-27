@@ -172,10 +172,10 @@ canvas {
 	
     <label for="daysSelector">Select number of days:</label>
     <select id="daysSelector" onchange="fetchData()">
-        <option value="7">7 Days</option>
-        <option value="14">14 Days</option>
-		<option value="30">30 Days</option>
-        <option value="90">90 Days</option>
+        <option value="90">7 Days</option>
+        <option value="30">14 Days</option>
+	<option value="14">30 Days</option>
+        <option value="7">90 Days</option>
         <option value="all">All (since Sep 2, 2023)</option>
     </select>
 <div>
@@ -664,7 +664,7 @@ function fetchData() {
         days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Total days since Sep 2, 2023
     }
 
-    const url = `https://api.thingspeak.com/channels/1970388/feed.json?days=${days}`;
+    const url = `https://api.thingspeak.com/channels/2795570/feed.json?days=${days}`;
     const method = 'GET';
 
     // XMLHttpRequest method

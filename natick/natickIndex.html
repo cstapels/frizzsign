@@ -62,7 +62,7 @@ canvas {
 
 		<!-- Header and Info -->
 		<div class="row" >   
-			<h2 align= center> Welcome to the Cognex Ultimate Frisbee daily sign-up page. 
+			<h2 align= center> Natick Ultimate Frisbee daily sign-up page. 
 			<br>
 			LETS PLAY ULTIMATE! </h2>
 			</div>
@@ -70,37 +70,21 @@ canvas {
         <button id="toggleButton">See Game Info</button>
     </div>
 			<div id="expandable">
-			<p><b>What</b>:  A daily pick-up game hosted by the employees of Cognex Corporation on the main campus on two permanently lined fields.
+			<p><b>What</b>:  A weekend pick-up game.
 			<br>
 			<b>Who</b>: Anyone at all levels is welcome to play.
 			<br>
-			<b>Where</b>:  1 Vision Drive, Natick, Massachusetts, 01760.  Fields are on your right as you enter Vision Drive.  Parking lot is on your left.
+			<b>Where</b>: Natick High School.
 			<br>
-			<b>When</b>:  Monday thru Friday (year round), no games on Saturdays or Sundays ~12:10 pm - ~1:15 pm EST
+			<b>When</b>:  Saturday 2 PM After DST, 4 PM during DST
 			<br>
-			<b>What to wear</b>:  Athletic gear appropriate for the weather, no special shirt colors are required, we use face recognition to verify team membership</p>
+			<b>What to wear</b>:  Athletic gear appropriate for the weather, Bring a red and a white shirt.  Grey is illegal.</p>
 			<br>
 			<br>
 		</div>
    <br> <br>
    
-<!--
-		<div class ="alert alert-primary" role="alert">
-			Cognex Ultimate Tournament is June 10th-14th!
-			<table>
-			<tr><td width=150px>
-			<a href="rules.html">Rules</a>
-			</td>
-			<td width=150px>
-			<a href="teams.html">Teams</a>
-			</td>
-			<td width=150px>
-			<a href="standings.html">Standings</a>
-			</td>
-			</tr>
-			</table>
-		</div>
--->
+
 		<!-- Sign up form fields and buttons -->
 		<div class="row">
 			<div class="col-md-3">
@@ -127,7 +111,7 @@ canvas {
 			</div>
 
 			<div class="col-md-2">
-				<button id="submitAddPlayerButton" type="button" class="btn btn-primary" onclick="submitAddPlayer()">Submit</button>
+				<button id="submitAddPlayerButton" type="button" class="btn btn-primary" onclick="submitAddPlayer()">Submit to Natick Game</button>
 			</div>
 		</div>
 
@@ -175,20 +159,7 @@ canvas {
 				<label id="lastUpdatedLabel" for="refreshTableButton">Last updated: never</label>
 			</div>
 
-			<div class="col-md-4 p-2">
-				<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
-					<div id="carouselItems" class="carousel-inner">
-					</div>
-					<button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
-						  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-						  <span class="visually-hidden">Previous</span>
-					</button>
-					<button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
-						  <span class="carousel-control-next-icon" aria-hidden="true"></span>
-						  <span class="visually-hidden">Next</span>
-					</button>
-				  </div>
-			</div>
+			
 		</div>
 
 		<br>
@@ -212,21 +183,14 @@ canvas {
     <ul id="topPlayersList" class="top-players-list"></ul>
 </div>
 	
-		<div class="row">
-			<div class="col">
-				<iframe  src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>	
-			</div>
-			<div class="col">
-			<iframe style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
-			</div>
-		</div>
+		
 
 	</div>
 </body>
 
 <script>
-	const PLAYER_CHANNEL_ID = 1970388;
-	const API_KEY = "2TAONI92GENB80T5";
+	const PLAYER_CHANNEL_ID = 2795570;
+	const API_KEY = "LFM2FDQZ78BXWFQ1";
 
 	// Uncomment these to use test API/Channel IDs
 	// const PLAYER_CHANNEL_ID = 1771583;
@@ -573,6 +537,9 @@ canvas {
     </script>
 	
 	    <script>
+	const PLAYER_CHANNEL_ID = 2795570;
+	const API_KEY = "LFM2FDQZ78BXWFQ1";
+
         let playerChart;
 
         // Function to fetch data based on user selection
@@ -588,7 +555,7 @@ canvas {
                 days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));  // Total days since Sep 2, 2023
             }
 
-            const url = `https://api.thingspeak.com/channels/1970388/feed.json?days=${days}`;
+            const url = `https://api.thingspeak.com/channels/${API_KEY}/feed.json?days=${days}`;
             const method = 'GET';
 
             // XMLHttpRequest method

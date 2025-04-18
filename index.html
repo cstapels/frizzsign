@@ -1,4 +1,4 @@
-@ -1,22 +1,21 @@
+
 <!doctype html>
 <html lang="en">
 	<head>
@@ -17,11 +17,11 @@
 	.row {
     display: flex;
     flex-direction: column;
-    align-items: center;
     width: 100%;
 }
 
-@ -25,6 +24,33 @@ canvas {
+canvas {
+    width: 100% !important;
     height: auto !important;
     max-width: 400px;
 }
@@ -55,26 +55,604 @@
 		
     </style>
 	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-@ -181,8 +207,9 @@ canvas {
+	</head>
+
+	<body style="padding: 20px;">
+	<div class="container">
+	
+
+		<!-- Header and Info -->
+		<div class="row" >   
+			<h2 align= center> Welcome to the Cognex Ultimate Frisbee daily sign-up page. 
+			<br>
+			LETS PLAY ULTIMATE! </h2>
+			</div>
+    <div style="text-align: right;">
+        <button id="toggleButton">See Game Info</button>
+    </div>
+			<div id="expandable">
+			<p><b>What</b>:  A daily pick-up game hosted by the employees of Cognex Corporation on the main campus on two permanently lined fields.
+			<br>
+			<b>Who</b>: Anyone at all levels is welcome to play.
+			<br>
+			<b>Where</b>:  1 Vision Drive, Natick, Massachusetts, 01760.  Fields are on your right as you enter Vision Drive.  Parking lot is on your left.
+			<br>
+			<b>When</b>:  Monday thru Friday (year round), no games on Saturdays or Sundays ~12:10 pm - ~1:15 pm EST
+			<br>
+			<b>What to wear</b>:  Athletic gear appropriate for the weather, no special shirt colors are required, we use face recognition to verify team membership</p>
+			<br>
+			<br>
+		</div>
+ 
+
+		<div class ="alert alert-warning" role="alert">
+			Cognex Ultimate Tournament! <b> June 2nd - June 10th , 2025</b>
+            <br>
+            <a href="https://forms.office.com/r/azaZybxNWZ">Sign up here!</a>
+			<table>
+			<tr><td width=150px>
+			<a href="rules.html">Last years rules</a>
+			</td>
+			<td width=150px>
+			<!--<a href="teams.html">Teams</a> -->
+			</td>
+			<td width=150px>
+			<!--<a href="standings.html">Standings</a>-->
+			</td>
+			</tr>
+			</table>
+		</div>
+
+		<!-- Sign up form fields and buttons -->
+		<div class="row">
+			<div class="col-md-3">
+			  <input id="playerNameInput" type="text" class="form-control" placeholder="Name" aria-label="Player Name">
+			</div>
+
+			<div class="col-md-4">
+			  <input id="playerCommentInput" type="text" class="form-control" placeholder="Comments" aria-label="Comments" >
+			</div>
+
+			<div class="col-md-3">
+				<div class="input-group">
+					<span class="input-group-text" >Min Players</span>
+					<select id="playerMinCountInput" class="form-select" aria-label="Minimum player count">
+						<option selected value="0">0</option>
+						<option value="6">6</option>
+						<option value="8">8</option>
+						<option value="10">10</option>
+						<option value="12">12</option>
+						<option value="14">14</option>
+
+					</select>
+				</div>
+			</div>
+
+			<div class="col-md-2">
+				<button id="submitAddPlayerButton" type="button" class="btn btn-primary" onclick="submitAddPlayer()">Submit</button>
+			</div>
+		</div>
+
+		<!-- Remove player dropdown and button-->
+		<div class="row pt-2">
+			<div class="col-md-6">
+				<div class="input-group">
+					<select id="removePlayerDropdown" class="form-select" aria-label="Remove Player">
+						<option selected disabled>Select Player</option>		
+					</select>
+					<button id="removePlayerButton" class="btn btn-danger" type="button" onclick="submitDeletePlayer()">Remove Player</button>
+				</div>
+			</div>
+		</div>
+		<br>
+    <div id="weather-info">
+        Loading weather data...
+    </div>
+    <script src="weather.js"></script>
+
+		<br>
+
+		<!-- Player count table heading-->
+		<div class="row">
+			<div class="col pt-2">
+				<h1 id="playerCountHeading"><span id="playerCountHeadingBadge" class="badge text-bg-warning">At Risk</span> Count: 0</h1>
+			</div>
+		</div>
+
+		<!-- Player count table & Carousel -->				
+		<div class="row">
+			<div class="col-md-8 p-2">
+				<table id="playerCountTable" class="table table-bordered">
+					<thead>
+						<tr>
+							<th scope="col-xs-1">#</th>
+							<th scope="col-xs-5">Player</th>
+							<th scope="col-xs-6">Comments</th>
+						</tr>
+					</thead>
+					<tbody id="playerCountTableBody">
+					</tbody>
+				</table>
+				<button id="refreshTableButton" type="button" class="btn btn-secondary" onclick="refreshCountTable()">Refresh</button>
+				<label id="lastUpdatedLabel" for="refreshTableButton">Last updated: never</label>
+			</div>
+
+			<div class="col-md-4 p-2">
+				<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+					<div id="carouselItems" class="carousel-inner">
+					</div>
+					<button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+						  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+						  <span class="visually-hidden">Previous</span>
+					</button>
+					<button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+						  <span class="carousel-control-next-icon" aria-hidden="true"></span>
+						  <span class="visually-hidden">Next</span>
+					</button>
+				  </div>
+			</div>
+		</div>
+
+		<br>
+		<br>
+		<!-- Stats and Visualizations -->
+		<h1>Stats</h1>
+		    <h1>Most Freq 20 Players</h1>
+
+    <!-- Dropdown for selecting days -->
+	
+    <label for="daysSelector">Select number of days:</label>
+    <select id="daysSelector" onchange="fetchData()">
+        <option value="7">7 Days</option>
+        <option value="14">14 Days</option>
+		<option value="30">30 Days</option>
         <option value="90">90 Days</option>
         <option value="all">All (since Sep 2, 2023)</option>
     </select>
-<div class="row">
-    <canvas id="playerChart" width="1000"  height="800"></canvas>
 <div>
     <h3>Top Players</h3>
     <ul id="topPlayersList" class="top-players-list"></ul>
 </div>
 	
 		<div class="row">
-@ -623,53 +650,80 @@
+			<div class="col">
+				<iframe  src="https://thingspeak.com/apps/matlab_visualizations/522966"></iframe>	
+			</div>
+			<div class="col">
+			<iframe style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/524685"></iframe>
+			</div>
+		</div>
+
+	</div>
+</body>
+
+<script>
+	const PLAYER_CHANNEL_ID = 1970388;
+	const API_KEY = "2TAONI92GENB80T5";
+
+	// Uncomment these to use test API/Channel IDs
+	// const PLAYER_CHANNEL_ID = 1771583;
+	// const API_KEY = "J479K990E44B85BQ";
+
+
+	// Update player count and badge
+	function updateCount(numPlayers, atRiskPlayers) {
+		const guaranteedPlayers = numPlayers - atRiskPlayers;
+		let countText = `Count: ${guaranteedPlayers}`;
+		if (atRiskPlayers > 0) {
+			countText += ` guaranteed, ${atRiskPlayers} at risk`;
+		}
+
+		const headingDiv = document.getElementById("playerCountHeading");
+		if (guaranteedPlayers >= 6) {
+			countText = '<span class="badge text-bg-success">Game On!</span> ' + countText;
+		} else {
+			countText = '<span class="badge text-bg-warning">At Risk</span> ' + countText;
+		}
+		headingDiv.innerHTML = countText;
+	}
+
+	async function getPlayerData() {
+		//const xhr = new XMLHttpRequest();
+		const currentDate = new Date();
+		let players = [];
+
+		const minutes = 60 * (parseInt(currentDate.getHours())+1) + Math.floor(Math.random() * 14);
+
+
+		const url = "https://api.thingspeak.com/channels/" + PLAYER_CHANNEL_ID + "/feeds.json?minutes=" + minutes;
+
+		let playerData =  await makeRequest("GET", url);
+		playerData = JSON.parse(playerData);
+
+		for (let p = 0; p < playerData.feeds.length; p++) {
+			const CurrentPlayer = playerData.feeds[p].field1; // 1 indicates add, -1 indicates delete, 0 a reset
+			const Name = playerData.feeds[p].field2; 
+			const Comment = playerData.feeds[p].field3;
+			const DeletePlayer = playerData.feeds[p].field4;
+
+			if (CurrentPlayer == -1) {
+				// Delete player and continue
+				players.splice(DeletePlayer - 1, 1);
+				continue;
+			}
+
+			// Parse comment string for "w/<number>"" or "with <number>"
+			let MinPlayers = 0;
+
+			try {
+				let withSlashRegex = /[wW]\/\s*(\d+)/;
+				let withMatch = Comment.match(withSlashRegex);
+				MinPlayers = withMatch ? Number(withMatch[1]) : MinPlayers;
+
+				let withSpaceRegex = /with\s+(\d+)/i;
+				withMatch = Comment.match(withSpaceRegex);
+				MinPlayers = withMatch ? Number(withMatch[1]) : MinPlayers;
+			} catch {
+				// failed to parse
+				console.error("Failed to test comment");
+			}
+
+			players.push({
+				Name,
+				Comment,
+				MinPlayers
+			});
+		}
+		return players;
+	}
+
+	// Promise-ified xhr.send()
+	function makeRequest(method, url, ...requestHeaderArgs) {
+		return new Promise(function (resolve, reject) {
+			let xhr = new XMLHttpRequest();
+			xhr.open(method, url);
+			if (requestHeaderArgs.length > 0) {
+				xhr.setRequestHeader(...requestHeaderArgs);
+			}
+			xhr.onload = function () {
+				if (this.status >= 200 && this.status < 300) {
+					resolve(xhr.response);
+				} else {
+					reject({
+						status: this.status,
+						statusText: xhr.statusText
+					});
+				}
+			};
+			xhr.onerror = function () {
+				reject({
+					status: this.status,
+					statusText: xhr.statusText
+				});
+			};
+			xhr.send();
+    	});
+	}
+
+	function countReached(playerData, minCount) {
+		// Sort playerData by Minimum players, in ascending order (make a copy first)
+		const sortedPlayerData = [...playerData].sort((a,b) => a.MinPlayers - b.MinPlayers);
+
+		let guaranteedPlayers = 0;
+
+		// Loop over player list backward. Stop when we hit a player that is guaranteed to play
+		// That player and every player above is guaranteed
+		for (let p = sortedPlayerData.length - 1; p >= 0; p--) {
+			if (sortedPlayerData[p].MinPlayers <= p + 1 ) {
+				guaranteedPlayers =  p + 1;
+				break;
+			}
+		}
+
+		return guaranteedPlayers >= minCount;
+	}
+
+	function updatePlayerCountTable(playerData) {
+		// Empty table body first
+		const playerCountTableBody = document.getElementById("playerCountTableBody");
+		playerCountTableBody.innerHTML = ''; 
+
+		const numPlayers = playerData.length;
+		let atRiskPlayers = 0;
+
+		for (let p = 0; p < numPlayers; p++ ) {
+
+			let htmlRow = `<th scope="row">${p+1} </th>
+							<td>${playerData[p].Name}</td>
+							<td>${playerData[p].Comment}</td>
+							`
+			let playerTr = document.createElement('tr');
+			playerTr.innerHTML = htmlRow;
+			
+			// Warn if player's min count has not been reached
+			if (!countReached(playerData, playerData[p].MinPlayers)){
+				playerTr.classList.add('table-warning');
+				atRiskPlayers += 1;
+			}
+
+			playerCountTableBody.appendChild(playerTr);
+
+		}
+
+		// Build dropdown to remove player
+		updateRemovePlayerDropdown(playerData);
+		updateCount(numPlayers, atRiskPlayers);
+
+		//Set refresh time
+		const currentDate = new Date();
+		const currentTime = currentDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second: '2-digit'});
+		document.getElementById("lastUpdatedLabel").innerText = `Last updated ${currentTime}`;
+	}
+
+	function updateRemovePlayerDropdown(playerData) {
+		const removePlayerDropdown = document.getElementById("removePlayerDropdown");
+		removePlayerDropdown.innerHTML = '';
+
+		// Add Header
+		const defaultOption = document.createElement('option');
+		defaultOption.selected = true;
+		defaultOption.disabled = true;
+		defaultOption.value = 0;
+		removePlayerDropdown.appendChild(defaultOption);
+
+		// Add entry for every current player
+		for (let p = 0; p < playerData.length; p++) {
+			const playerName = playerData[p].Name;
+			let option = document.createElement('option');
+			option.innerText = playerName;
+			option.value = p + 1; // Give value to dropdown (1-indexed)
+			removePlayerDropdown.appendChild(option);
+		}
+	}
+
+	function toggleSpinners(spinnerEnabled) {
+		// Toggle all spinners that could impact the data
+		toggleSpinner(document.getElementById("refreshTableButton"), spinnerEnabled);
+		toggleSpinner(document.getElementById("submitAddPlayerButton"), spinnerEnabled);
+		toggleSpinner(document.getElementById("removePlayerButton"), spinnerEnabled);
+	}
+
+	function toggleSpinner(toButton, spinnerEnabled) {
+		while (toButton.lastElementChild) {
+			toButton.removeChild(toButton.lastElementChild);
+		}
+		if (spinnerEnabled) {
+			let spinner = document.createElement('span');
+			spinner.classList.add('spinner-border')
+			spinner.classList.add('spinner-border-sm');
+			toButton.appendChild(spinner);
+			toButton.disabled = true;
+		} else {
+			toButton.disabled = false;
+		}
+	}
+
+	async function submitAddPlayer () {
+		// Handle clicking on "submit" button
+		const playerName = document.getElementById("playerNameInput").value.trim();
+		let comment = document.getElementById("playerCommentInput").value.trim();
+		const minPlayers = document.getElementById("playerMinCountInput").value;
+
+		// If minPlayers is set, add "w/<num>" to comment field
+		if (minPlayers !== '0') {
+			comment = `${comment} w/${minPlayers}`;
+		}
+
+		if (playerName === "") {
+			alert("Please enter the player name");
+		} else {
+			toggleSpinners(true);
+			await addPlayer(playerName, comment);
+			setTimeout(() => {
+				refreshCountTable();
+				toggleSpinners(false);
+			}, 3000);		}
+	}
+
+	async function submitDeletePlayer () {
+		const removePlayerDropdown = document.getElementById("removePlayerDropdown");
+		const playerNum = removePlayerDropdown.value;
+
+		if (playerNum == 0) {
+			alert("Select a player to delete");
+		} else {
+			await deletePlayer(playerNum);
+			toggleSpinners(true);
+			setTimeout(() => {
+				refreshCountTable();
+				toggleSpinners(false);
+			}, 3000);
+		}
+	}
+
+	async function addPlayer(name, comment) {
+		name=encodeURIComponent(name);
+		comment=encodeURIComponent(comment);
+	
+		const addPlayerUrl = `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=1&field2=${name}&field3=${comment}`;
+		return makeRequest("GET", addPlayerUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+	}
+
+	//Player deleted by number at time of deletion instead of name
+	async function deletePlayer(playerNum) {
+		const deletePlayerUrl =  `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=-1&field2=delete&field3=delete&field4=${playerNum}`;
+		return makeRequest("GET", deletePlayerUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+	}
+
+
+	async function refreshCountTable() {
+		const refreshButton = document.getElementById("refreshTableButton");
+		const playerData = await getPlayerData();
+		updatePlayerCountTable(playerData);
+	}
+
+	function shuffle(array) {
+		let currentIndex = array.length,  randomIndex;
+		// While there remain elements to shuffle.
+		while (currentIndex > 0) {
+
+			// Pick a remaining element.
+			randomIndex = Math.floor(Math.random() * currentIndex);
+			currentIndex--;
+
+			// And swap it with the current element.
+			[array[currentIndex], array[randomIndex]] = [
+			array[randomIndex], array[currentIndex]];
+		}
+		return array;
+	}
+
+	function buildCarousel () {
+		const carouselParent = document.getElementById("carouselItems");
+
+		let imgNums = [];
+		for (let i = 31; i<=46; i++) {
+			imgNums.push(i);
+		}
+		imgNums = shuffle(imgNums);
+		let first = true;
+
+		imgNums.forEach((img) => {
+			const item = document.createElement('div');
+			item.classList.add("carousel-item");
+			item.innerHTML = `<img src="img/f${img}.jpg" class="d-block w-100">`;
+			if (first) {
+				item.classList.add('active');
+			}
+
+			carouselParent.appendChild(item);
+			first = false;
+		})
+	}
+
+   // On load, startup page
+    window.addEventListener('load', (event) => {
+        buildCarousel();
+        refreshCountTable();
+    });
+
+</script>
+<script>
+        function setCookie(name, value, days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + date.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const expandable = document.getElementById("expandable");
+            const toggleButton = document.getElementById("toggleButton");
+
+            if (!getCookie("expanded")) {
+                expandable.classList.add("expanded");
+                setCookie("expanded", "false", 365);
+				console.log(document.cookie); // Log cookies to see if it's set
+            }
+
+            toggleButton.addEventListener("click", function() {
+                expandable.classList.toggle("expanded");
+				            // Change the button text based on the expanded state
+            if (expandable.classList.contains("expanded")) {
+                toggleButton.textContent = "Hide Game Info";
+            } else {
+                toggleButton.textContent = "See Game Info";
+            }
+            });
+        });
+    </script>
+	
+	    <script>
+        let playerChart;
+
+        // Function to fetch data based on user selection
+        function fetchData() {
+            const daysSelector = document.getElementById("daysSelector");
+            let days = daysSelector.value;
+
+            if (days === 'all') {
+                // Calculate number of days from September 2, 2023 to today
+                const startDate = new Date('2023-09-02');
+                const today = new Date();
+                const diffTime = Math.abs(today - startDate);
+                days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));  // Total days since Sep 2, 2023
+            }
+
+            const url = `https://api.thingspeak.com/channels/1970388/feed.json?days=${days}`;
+            const method = 'GET';
+
+            // XMLHttpRequest method
+            let xhr = new XMLHttpRequest();
+            xhr.open(method, url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    const playerCounts = countPlayers(response.feeds);
+                    updateChart(playerCounts);
+                }
+            };
+            xhr.onerror = function () {
+                console.error('Error fetching data');
+            };
+            xhr.send();
+        }
+
+       
+
+// Function to process entries
+function countPlayers(entries) {
+  const playerOccurrences = {};
+
+  // Group entries by date
+  const groupedByDate = entries.reduce((acc, entry) => {
+    const date = entry.created_at.split('T')[0]; // Get the date part
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(entry);
+    return acc;
+  }, {});
+
+  // Process each day's entries
+  for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
+    const dailyPlayers = [];
+
+    dailyEntries.forEach(entry => {
+      const playerName = entry.field2 ? entry.field2.toLowerCase() : null; // Convert to lowercase if not null
+      const playerToRemove = entry.field4 ? entry.field4.toLowerCase() : null; // Convert to lowercase if not null
+
+
+      if (entry.field1 !== '-1') {
+        dailyPlayers.push(playerName);
+      } else {
+        
+          dailyPlayers.splice(playerToRemove-1, 1);
+        
+      }
+    });
+
+    // Count occurrences of each player name
+    dailyPlayers.forEach(player => {
+      if (!playerOccurrences[player]) {
+        playerOccurrences[player] = 0;
+      }
+      playerOccurrences[player]++;
+    });
+  }
 
   return playerOccurrences;
 }
-       
 
-       // Function to update the chart
-function updateChart(playerCounts) {
 
        
 // Function to update the list
@@ -82,18 +660,12 @@ function updateList(playerCounts) {
     // Sort and get top 20 players
     const sortedPlayers = Object.entries(playerCounts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 20);  // Get top 20 players
         .slice(0, 20); // Get top 20 players
 
-    const playerNames = sortedPlayers.map(player => player[0].charAt(0).toUpperCase() + player[0].slice(1));  // Capitalize first letter
-    const playerCountsData = sortedPlayers.map(player => player[1]);
     // Update the HTML list
     const listContainer = document.getElementById('topPlayersList');
     listContainer.innerHTML = ''; // Clear existing list
 
-    // If the chart already exists, destroy it before creating a new one
-    if (playerChart) {
-        playerChart.destroy();
     sortedPlayers.forEach(([playerName, count], index) => {
         const capitalizedPlayerName = playerName.charAt(0).toUpperCase() + playerName.slice(1);
         const listItem = document.createElement('li');
@@ -129,29 +701,6 @@ function fetchData() {
         days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Total days since Sep 2, 2023
     }
 
-    const ctx = document.getElementById('playerChart').getContext('2d');
-    playerChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: playerNames,
-            datasets: [{
-                label: 'Player Count',
-                data: playerCountsData,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-				barThickness: 6
-            }]
-        },
-        options: {
-                responsive: true,
-
-		indexAxis: 'y',  // Switch the axis to display names on the y-axis (left)
-            scales: {
-                x: {
-                    beginAtZero: true
-                }
-            }
     const url = `https://api.thingspeak.com/channels/1970388/feed.json?days=${days}`;
     const method = 'GET';
 
@@ -164,7 +713,6 @@ function fetchData() {
             const playerCounts = countPlayers(response.feeds);
             updateList(playerCounts);
         }
-    });
     };
     xhr.onerror = function () {
         console.error('Error fetching data');

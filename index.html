@@ -113,24 +113,27 @@ canvas {
 			  <input id="playerCommentInput" type="text" class="form-control" placeholder="Comments" aria-label="Comments" >
 			</div>
 
-			<div class="col-md-3">
+			<div class="col-md-2"> <!-- Adjusted from col-md-3 -->
 				<div class="input-group">
 					<span class="input-group-text" >Min Players</span>
 					<select id="playerMinCountInput" class="form-select" aria-label="Minimum player count">
 						<option selected value="0">0</option>
 						<option value="6">6</option>
 						<option value="8">8</option>
-						<option value="10">10</option>
+						<option selected value="10">10</option>
 						<option value="12">12</option>
 						<option value="14">14</option>
-
 					</select>
 				</div>
 			</div>
 
-			<div class="col-md-2">
-				<button id="submitAddPlayerButton" type="button" class="btn btn-primary" onclick="submitAddPlayer()">Submit</button>
+			<div class="col-md-3 my-3"> <!-- Adjusted from col-md-2 to fit two buttons -->
+				<div class="btn-group" role="group" aria-label="Submit actions">
+					<button id="submitAddPlayerButton" type="button" class="btn btn-primary" onclick="submitAddPlayer()">Add Player</button>
+					<button id="submitAddCommentButton" type="button" class="btn btn-info ms-3" onclick="submitAddComment()">Add Comment</button>
+				</div>
 			</div>
+
 		</div>
 
 		<!-- Remove player dropdown and button-->
@@ -138,9 +141,9 @@ canvas {
 			<div class="col-md-6">
 				<div class="input-group">
 					<select id="removePlayerDropdown" class="form-select" aria-label="Remove Player">
-						<option selected disabled>Select Player</option>		
+						<option selected disabled value="0">Select Item to Remove</option>
 					</select>
-					<button id="removePlayerButton" class="btn btn-danger" type="button" onclick="submitDeletePlayer()">Remove Player</button>
+					<button id="removePlayerButton" class="btn btn-danger" type="button" onclick="submitDeletePlayer()">Remove Selected Item</button>
 				</div>
 			</div>
 		</div>
@@ -166,8 +169,9 @@ canvas {
 					<thead>
 						<tr>
 							<th scope="col-xs-1">#</th>
-							<th scope="col-xs-5">Player</th>
-							<th scope="col-xs-6">Comments</th>
+							<th scope="col-xs-4">Player/Commenter</th>
+							<th scope="col-xs-4">Comments</th>
+							<th scope="col-xs-2">Min Players</th>
 						</tr>
 					</thead>
 					<tbody id="playerCountTableBody">
@@ -266,38 +270,37 @@ canvas {
 		playerData = JSON.parse(playerData);
 
 		for (let p = 0; p < playerData.feeds.length; p++) {
-			const CurrentPlayer = playerData.feeds[p].field1; // 1 indicates add, -1 indicates delete, 0 a reset
+			const opType = parseInt(playerData.feeds[p].field1); // 1: add player, 2: add comment, -1: del player, -2: del comment
 			const Name = playerData.feeds[p].field2; 
 			const Comment = playerData.feeds[p].field3;
-			const DeletePlayer = playerData.feeds[p].field4;
+			const DeleteIndex = parseInt(playerData.feeds[p].field4); // 1-based index of item to delete
 
-			if (CurrentPlayer == -1) {
-				// Delete player and continue
-				players.splice(DeletePlayer - 1, 1);
+			if (opType === -1 || opType === -2) {
+				// Delete player/comment. DeleteIndex refers to the Nth item in the list at that time.
+				if (players.length >= DeleteIndex && DeleteIndex > 0) {
+					players.splice(DeleteIndex - 1, 1);
+				}
 				continue;
 			}
 
-			// Parse comment string for "w/<number>"" or "with <number>"
-			let MinPlayers = 0;
+			let minPlayersForEntry = 0;
 
-			try {
-				let withSlashRegex = /[wW]\/\s*(\d+)/;
-				let withMatch = Comment.match(withSlashRegex);
-				MinPlayers = withMatch ? Number(withMatch[1]) : MinPlayers;
-
-				let withSpaceRegex = /with\s+(\d+)/i;
-				withMatch = Comment.match(withSpaceRegex);
-				MinPlayers = withMatch ? Number(withMatch[1]) : MinPlayers;
-			} catch {
-				// failed to parse
-				console.error("Failed to test comment");
+			if (opType === 1) { // Add player
+				minPlayersForEntry = parseInt(playerData.feeds[p].field5) || 0; // Read MinPlayers from field5
+				players.push({
+					Name,
+					Comment,
+					MinPlayers: minPlayersForEntry, // This is the "Min Players Desired"
+					Type: 'player'
+				});
+			} else if (opType === 2) { // Add comment
+				players.push({
+					Name, // Person who made the comment
+					Comment, // The actual comment text
+					MinPlayers: 0, // General comments don't have a min player requirement
+					Type: 'comment'
+				});
 			}
-
-			players.push({
-				Name,
-				Comment,
-				MinPlayers
-			});
 		}
 		return players;
 	}
@@ -330,16 +333,14 @@ canvas {
     	});
 	}
 
-	function countReached(playerData, minCount) {
-		// Sort playerData by Minimum players, in ascending order (make a copy first)
-		const sortedPlayerData = [...playerData].sort((a,b) => a.MinPlayers - b.MinPlayers);
+	function countReached(playerArray, minCount) { // Expects an array of actual player objects
+		// Sort playerArray by Minimum players, in ascending order (make a copy first)
+		const sortedPlayers = [...playerArray].sort((a,b) => a.MinPlayers - b.MinPlayers);
 
 		let guaranteedPlayers = 0;
-
-		// Loop over player list backward. Stop when we hit a player that is guaranteed to play
-		// That player and every player above is guaranteed
-		for (let p = sortedPlayerData.length - 1; p >= 0; p--) {
-			if (sortedPlayerData[p].MinPlayers <= p + 1 ) {
+		// Loop over sorted player list backward.
+		for (let p = sortedPlayers.length - 1; p >= 0; p--) {
+			if (sortedPlayers[p].MinPlayers <= p + 1 ) { // p+1 is the count of players including this one and above
 				guaranteedPlayers =  p + 1;
 				break;
 			}
@@ -353,31 +354,50 @@ canvas {
 		const playerCountTableBody = document.getElementById("playerCountTableBody");
 		playerCountTableBody.innerHTML = ''; 
 
-		const numPlayers = playerData.length;
-		let atRiskPlayers = 0;
+		const actualPlayers = playerData.filter(item => item.Type === 'player');
+		const comments = playerData.filter(item => item.Type === 'comment');
 
-		for (let p = 0; p < numPlayers; p++ ) {
+		let atRiskActualPlayers = 0;
 
+		// Display actual players
+		for (let p = 0; p < actualPlayers.length; p++ ) {
 			let htmlRow = `<th scope="row">${p+1} </th>
-							<td>${playerData[p].Name}</td>
-							<td>${playerData[p].Comment}</td>
+							<td>${actualPlayers[p].Name}</td>
+							<td>${actualPlayers[p].Comment}</td>
+							<td>${actualPlayers[p].MinPlayers > 0 ? actualPlayers[p].MinPlayers : '-'}</td>
 							`
 			let playerTr = document.createElement('tr');
 			playerTr.innerHTML = htmlRow;
 			
 			// Warn if player's min count has not been reached
-			if (!countReached(playerData, playerData[p].MinPlayers)){
+			if (!countReached(actualPlayers, actualPlayers[p].MinPlayers)){
 				playerTr.classList.add('table-warning');
-				atRiskPlayers += 1;
+				atRiskActualPlayers += 1;
 			}
-
 			playerCountTableBody.appendChild(playerTr);
+		}
 
+		// Display comments at the bottom
+		if (comments.length > 0 && actualPlayers.length > 0) {
+			let separatorRow = document.createElement('tr');
+			separatorRow.innerHTML = `<td colspan="4" class="text-center table-secondary"><b>Comments</b></td>`;
+			playerCountTableBody.appendChild(separatorRow);
+		}
+		for (let c = 0; c < comments.length; c++ ) {
+			let htmlRow = `<th scope="row">C${c+1}</th>
+							<td>${comments[c].Name}</td>
+							<td>${comments[c].Comment}</td>
+							<td>N/A</td>
+							`
+			let commentTr = document.createElement('tr');
+			commentTr.innerHTML = htmlRow;
+			commentTr.classList.add('table-info'); // Style comments differently
+			playerCountTableBody.appendChild(commentTr);
 		}
 
 		// Build dropdown to remove player
 		updateRemovePlayerDropdown(playerData);
-		updateCount(numPlayers, atRiskPlayers);
+		updateCount(actualPlayers.length, atRiskActualPlayers);
 
 		//Set refresh time
 		const currentDate = new Date();
@@ -393,23 +413,29 @@ canvas {
 		const defaultOption = document.createElement('option');
 		defaultOption.selected = true;
 		defaultOption.disabled = true;
-		defaultOption.value = 0;
+		defaultOption.value = "0";
+		defaultOption.innerText = "Select Item to Remove";
 		removePlayerDropdown.appendChild(defaultOption);
 
 		// Add entry for every current player
 		for (let p = 0; p < playerData.length; p++) {
-			const playerName = playerData[p].Name;
+			const item = playerData[p];
 			let option = document.createElement('option');
-			option.innerText = playerName;
+			if (item.Type === 'player') {
+				option.innerText = `${p+1}. ${item.Name} (${item.Comment.substring(0,20)})`;
+			} else { // 'comment'
+				option.innerText = `${p+1}. ${item.Name}: ${item.Comment.substring(0,30)}...`;
+			}
 			option.value = p + 1; // Give value to dropdown (1-indexed)
+			option.dataset.type = item.Type; // Store type for deletion logic
 			removePlayerDropdown.appendChild(option);
 		}
 	}
 
 	function toggleSpinners(spinnerEnabled) {
-		// Toggle all spinners that could impact the data
 		toggleSpinner(document.getElementById("refreshTableButton"), spinnerEnabled);
 		toggleSpinner(document.getElementById("submitAddPlayerButton"), spinnerEnabled);
+		toggleSpinner(document.getElementById("submitAddCommentButton"), spinnerEnabled);
 		toggleSpinner(document.getElementById("removePlayerButton"), spinnerEnabled);
 	}
 
@@ -434,50 +460,70 @@ canvas {
 		let comment = document.getElementById("playerCommentInput").value.trim();
 		const minPlayers = document.getElementById("playerMinCountInput").value;
 
-		// If minPlayers is set, add "w/<num>" to comment field
-		if (minPlayers !== '0') {
-			comment = `${comment} w/${minPlayers}`;
-		}
-
 		if (playerName === "") {
 			alert("Please enter the player name");
 		} else {
 			toggleSpinners(true);
-			await addPlayer(playerName, comment);
+			await addPlayerOrComment(playerName, comment, 1, minPlayers); // field1=1 for player, pass minPlayers
 			setTimeout(() => {
 				refreshCountTable();
 				toggleSpinners(false);
 			}, 3000);		}
 	}
 
+	async function submitAddComment() {
+		const commenterName = document.getElementById("playerNameInput").value.trim();
+		const commentText = document.getElementById("playerCommentInput").value.trim();
+
+		if (commenterName === "" || commentText === "") {
+			alert("Please enter your name (in Name field) and the comment (in Comments field).");
+			return;
+		}
+
+		toggleSpinners(true);
+		await addPlayerOrComment(commenterName, commentText, 2, "0"); // field1=2 for comment, minPlayers is 0 or not applicable
+		setTimeout(() => {
+			refreshCountTable();
+			toggleSpinners(false);
+			// Optionally clear fields after adding comment
+			// document.getElementById("playerNameInput").value = "";
+			// document.getElementById("playerCommentInput").value = "";
+		}, 3000);
+	}
+
 	async function submitDeletePlayer () {
 		const removePlayerDropdown = document.getElementById("removePlayerDropdown");
-		const playerNum = removePlayerDropdown.value;
+		const selectedOption = removePlayerDropdown.options[removePlayerDropdown.selectedIndex];
+		const itemIndex = selectedOption.value; // This is the 1-based index in the combined list
+		const itemType = selectedOption.dataset.type; // 'player' or 'comment'
 
-		if (playerNum == 0) {
-			alert("Select a player to delete");
+		if (itemIndex == "0") { // Value is string "0"
+			alert("Select an item to delete");
 		} else {
-			await deletePlayer(playerNum);
+			let field1Value = (itemType === 'comment') ? -2 : -1;
 			toggleSpinners(true);
+			await deleteItem(itemIndex, field1Value);
 			setTimeout(() => {
 				refreshCountTable();
 				toggleSpinners(false);
 			}, 3000);
 		}
 	}
-
-	async function addPlayer(name, comment) {
+	async function addPlayerOrComment(name, comment, field1Value, minPlayersValue = "0") {
 		name=encodeURIComponent(name);
 		comment=encodeURIComponent(comment);
 	
-		const addPlayerUrl = `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=1&field2=${name}&field3=${comment}`;
-		return makeRequest("GET", addPlayerUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+		let apiUrl = `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=${field1Value}&field2=${name}&field3=${comment}`;
+		if (field1Value === 1) { // Only add field5 if it's a player
+			apiUrl += `&field5=${minPlayersValue}`;
+		}
+		return makeRequest("GET", apiUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+
 	}
 
-	//Player deleted by number at time of deletion instead of name
-	async function deletePlayer(playerNum) {
-		const deletePlayerUrl =  `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=-1&field2=delete&field3=delete&field4=${playerNum}`;
-		return makeRequest("GET", deletePlayerUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+	async function deleteItem(itemIndex, field1Value) {
+		const apiUrl =  `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=${field1Value}&field2=delete&field3=delete&field4=${itemIndex}`;
+		return makeRequest("GET", apiUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 	}
 
 
@@ -613,44 +659,44 @@ canvas {
 
 // Function to process entries
 function countPlayers(entries) {
-  const playerOccurrences = {};
+    const playerOccurrences = {};
 
-  // Group entries by date
-  const groupedByDate = entries.reduce((acc, entry) => {
-    const date = entry.created_at.split('T')[0]; // Get the date part
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(entry);
-    return acc;
-  }, {});
+    // Group entries by date
+    const groupedByDate = entries.reduce((acc, entry) => {
+        const date = entry.created_at.split('T')[0]; // Get the date part
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(entry);
+        return acc;
+    }, {});
 
-  // Process each day's entries
-  for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
-    const dailyPlayers = [];
+    // Process each day's entries
+    for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
+        const dailyPlayerList = []; // Stores player names for the current day
 
-    dailyEntries.forEach(entry => {
-      const playerName = entry.field2 ? entry.field2.toLowerCase() : null; // Convert to lowercase if not null
-      const playerToRemove = entry.field4 ? entry.field4.toLowerCase() : null; // Convert to lowercase if not null
+        dailyEntries.forEach(entry => {
+            const opType = parseInt(entry.field1);
+            const nameField = entry.field2 ? entry.field2.toLowerCase() : null;
+            const indexToRemove = entry.field4 ? parseInt(entry.field4) : null; // 1-based index
 
+            if (opType === 1) { // Add player
+                if (nameField) dailyPlayerList.push(nameField);
+            } else if (opType === -1) { // Remove player
+                if (indexToRemove && indexToRemove > 0 && indexToRemove <= dailyPlayerList.length) {
+                    dailyPlayerList.splice(indexToRemove - 1, 1);
+                }
+            }
+            // opType 2 (add comment) and -2 (remove comment) are ignored for player stats
+        });
 
-      if (entry.field1 !== '-1') {
-        dailyPlayers.push(playerName);
-      } else {
-        
-          dailyPlayers.splice(playerToRemove-1, 1);
-        
-      }
-    });
-
-    // Count occurrences of each player name
-    dailyPlayers.forEach(player => {
-      if (!playerOccurrences[player]) {
-        playerOccurrences[player] = 0;
-      }
-      playerOccurrences[player]++;
-    });
-  }
-
-  return playerOccurrences;
+        // Count unique players for the day (each player counted once per day they played)
+        const dailyUniquePlayers = new Set(dailyPlayerList);
+        dailyUniquePlayers.forEach(player => {
+            if (player) { // Ensure player is not null or empty
+                playerOccurrences[player] = (playerOccurrences[player] || 0) + 1;
+            }
+        });
+    }
+    return playerOccurrences;
 }
 
 

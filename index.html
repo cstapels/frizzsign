@@ -116,21 +116,22 @@ canvas {
 			<div class="col-md-2"> <!-- Adjusted from col-md-3 -->
 				<div class="input-group">
 					<span class="input-group-text" >Min Players</span>
-					<select id="playerMinCountInput" class="form-select" aria-label="Minimum player count">
-						<option selected value="0">0</option>
+					<input type="number" id="playerMinCountInput" class="form-control" value="0" min="0" step="1" list="minPlayerSuggestions" aria-label="Minimum player count">
+					<datalist id="minPlayerSuggestions">
+						<option selected value="0"></option>
 						<option value="6">6</option>
 						<option value="8">8</option>
-						<option selected value="10">10</option>
+						<option value="10"></option>
 						<option value="12">12</option>
 						<option value="14">14</option>
-					</select>
+					</datalist>
 				</div>
 			</div>
 
 			<div class="col-md-3 my-3"> <!-- Adjusted from col-md-2 to fit two buttons glop-->
 				<div class="btn-group" role="group" aria-label="Submit actions">
 					<button id="submitAddPlayerButton" type="button" class="btn btn-primary" onclick="submitAddPlayer()">Add Player</button>
-					<button id="submitAddCommentButton" type="button" class="btn btn-info ms-3" onclick="submitAddComment()">Add Comment</button>
+					<button id="submitAddCommentButton" type="button" class="btn btn-info ms-3" onclick="submitAddComment()">Comment Only</button>
 				</div>
 			</div>
 
@@ -387,7 +388,7 @@ canvas {
 			let htmlRow = `<th scope="row">C${c+1}</th>
 							<td>${comments[c].Name}</td>
 							<td>${comments[c].Comment}</td>
-							<td>N/A</td>
+							<td> </td>
 							`
 			let commentTr = document.createElement('tr');
 			commentTr.innerHTML = htmlRow;
@@ -458,12 +459,28 @@ canvas {
 		// Handle clicking on "submit" button
 		const playerName = document.getElementById("playerNameInput").value.trim();
 		let comment = document.getElementById("playerCommentInput").value.trim();
-		const minPlayers = document.getElementById("playerMinCountInput").value;
+		// Initialize minPlayers as an integer from the input field, default to 0 if parsing fails or input is invalid
+		let minPlayers = parseInt(document.getElementById("playerMinCountInput").value);
+		if (isNaN(minPlayers) || minPlayers < 0) { // Ensure it's a valid non-negative number
+			minPlayers = 0;
+		}
 
 		if (playerName === "") {
 			alert("Please enter the player name");
+			return; // Stop execution if player name is missing
 		} else {
 			toggleSpinners(true);
+			// If comment contains "w/NUMBER", override minPlayers
+			if (comment) {
+				const withSlashRegex = /[wW]\/\s*(\d+)/;
+				const match = comment.match(withSlashRegex);
+				if (match && match[1]) {
+					const minPlayersFromComment = parseInt(match[1]);
+					if (!isNaN(minPlayersFromComment) && minPlayersFromComment >= 0) { // Ensure valid parse and non-negative
+						minPlayers = minPlayersFromComment; // Override with comment value
+					}
+				}
+			}
 			await addPlayerOrComment(playerName, comment, 1, minPlayers); // field1=1 for player, pass minPlayers
 			setTimeout(() => {
 				refreshCountTable();

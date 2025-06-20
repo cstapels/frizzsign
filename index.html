@@ -85,23 +85,24 @@ canvas {
 		</div>
  
 
-		<div class ="alert alert-warning" role="alert">
-			2025 Cognex Ultimate Tournament! <b> June 2nd - June 6th , 2025</b>
-            <br>
+		<!-- <div class ="alert alert-warning" role="alert"> -->
+		<!-- 	2025 Cognex Ultimate Tournament! <b> June 2nd - June 6th , 2025</b> -->
+        <!--     <br> -->
             <!--<a href="https://forms.office.com/r/azaZybxNWZ">Sign up here!</a>-->
-			<table>
-			<tr><td width=150px>
-			<a href="rules.html">Rules</a>
-			</td>
-			<td width=150px>
-			<a href="teams.html">Teams</a> 
-			</td>
-			<td width=150px>
-			<a href="standings.html">Standings</a>
-			</td>
-			</tr>
-			</table>
-		</div>
+		<!-- 	<table> -->
+		<!-- 	<tr><td width=150px> -->
+		<!-- 	<a href="rules.html">Rules</a> -->
+		<!-- 	</td> -->
+		<!-- 	<td width=150px> -->
+		<!-- 	<a href="teams.html">Teams</a>  -->
+		<!-- 	</td> -->
+		<!-- 	<td width=150px> -->
+		<!-- 	<a href="standings.html">Standings</a> -->
+		<!-- 	</td> -->
+		<!-- 	</tr> -->
+		<!-- 	</table> -->
+		<!-- </div> -->
+	
 
 		<!-- Sign up form fields and buttons -->
 		<div class="row">
@@ -158,8 +159,13 @@ canvas {
 
 		<!-- Player count table heading-->
 		<div class="row">
-			<div class="col pt-2">
-				<h1 id="playerCountHeading"><span id="playerCountHeadingBadge" class="badge text-bg-warning">At Risk</span> Count: 0</h1>
+			<div class="col pt-2 d-flex align-items-center"> <!-- Added d-flex and align-items-center -->
+				<h1 id="playerCountHeading" class="mb-0 me-auto"><span id="playerCountHeadingBadge" class="badge text-bg-warning">At Risk</span> Count: 0</h1> <!-- Added mb-0 and me-auto -->
+				<!-- Date Navigation Controls (Right Justified) -->
+				<a href="#" id="prevDayLink" class="me-2" onclick="handlePrevDay(); return false;">&lt;</a> <!-- Changed to link -->
+				<span id="viewingDateLabel" class="me-2">Viewing: Today</span> <!-- Changed to span -->
+				<a href="#" id="nextDayLink" class="me-2" onclick="handleNextDay(); return false;" disabled>&gt;</a> <!-- Changed to link -->
+				<a href="#" id="todayLink" onclick="handleToday(); return false;">Today</a> <!-- Added Today link -->
 			</div>
 		</div>
 
@@ -178,10 +184,9 @@ canvas {
 					<tbody id="playerCountTableBody">
 					</tbody>
 				</table>
-				<button id="refreshTableButton" type="button" class="btn btn-secondary" onclick="refreshCountTable()">Refresh</button>
-				<label id="lastUpdatedLabel" for="refreshTableButton">Last updated: never</label>
+				<button id="refreshTableButton" type="button" class="btn btn-secondary me-2 mb-2" onclick="refreshCountTable()">Refresh</button>
+				<label id="lastUpdatedLabel" for="refreshTableButton" class="me-auto mb-2">Last updated: never</label>
 			</div>
-
 			<div class="col-md-4 p-2">
 				<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
 					<div id="carouselItems" class="carousel-inner">
@@ -239,7 +244,34 @@ canvas {
 	// const PLAYER_CHANNEL_ID = 1771583;
 	// const API_KEY = "J479K990E44B85BQ";
 
+	let currentViewDate = new Date(); // Stores the date being viewed
 
+		// Function to sanitize HTML input
+	function sanitizeHtml(str) {
+		const map = {
+			'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+		};
+		return str.replace(/[&<>"']/g, function(m) { return map[m]; });
+	}
+
+	function formatDateForDisplay(date) {
+		if (isToday(date)) return "Today";
+		return date.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+	}
+
+	function formatDateForApi(date) { // YYYY-MM-DD
+		const year = date.getFullYear();
+		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+		const day = date.getDate().toString().padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	}
+
+	function isToday(date) {
+		const today = new Date();
+		return date.getFullYear() === today.getFullYear() &&
+			   date.getMonth() === today.getMonth() &&
+			   date.getDate() === today.getDate();
+	}
 	// Update player count and badge
 	function updateCount(numPlayers, atRiskPlayers) {
 		const guaranteedPlayers = numPlayers - atRiskPlayers;
@@ -258,15 +290,22 @@ canvas {
 	}
 
 	async function getPlayerData() {
-		//const xhr = new XMLHttpRequest();
-		const currentDate = new Date();
 		let players = [];
+		let url;
 
-		const minutes = 60 * (parseInt(currentDate.getHours())+1) + Math.floor(Math.random() * 14);
-
-
-		const url = "https://api.thingspeak.com/channels/" + PLAYER_CHANNEL_ID + "/feeds.json?minutes=" + minutes;
-
+		if (isToday(currentViewDate)) {
+			// Fetch data for today using the 'minutes' parameter to get recent activity.
+			// This aims to get all entries for the "current day's game".
+			const minutes = 60 * (currentViewDate.getHours() + 1) + Math.floor(Math.random() * 14);
+			url = `https://api.thingspeak.com/channels/${PLAYER_CHANNEL_ID}/feeds.json?minutes=${minutes}&results=8000`;
+		} else {
+			// Fetch all data for the selected past day
+			const dateStr = formatDateForApi(currentViewDate);
+			const start = `${dateStr}%2000:00:00`;
+			const end = `${dateStr}%2023:59:59`;
+			// ThingSpeak uses UTC for timestamps. This will fetch feeds created on that UTC day.
+			url = `https://api.thingspeak.com/channels/${PLAYER_CHANNEL_ID}/feeds.json?start=${start}&end=${end}&results=8000`;
+		}
 		let playerData =  await makeRequest("GET", url);
 		playerData = JSON.parse(playerData);
 
@@ -402,8 +441,13 @@ canvas {
 
 		//Set refresh time
 		const currentDate = new Date();
-		const currentTime = currentDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second: '2-digit'});
-		document.getElementById("lastUpdatedLabel").innerText = `Last updated ${currentTime}`;
+		const currentTime = currentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+		const lastUpdatedLabel = document.getElementById("lastUpdatedLabel");
+		if (isToday(currentViewDate)) {
+			lastUpdatedLabel.innerText = `Last updated ${currentTime}`;
+		} else {
+			lastUpdatedLabel.innerText = `Displaying data for ${formatDateForDisplay(currentViewDate)}, loaded ${currentTime}`;
+		}
 	}
 
 	function updateRemovePlayerDropdown(playerData) {
@@ -438,7 +482,19 @@ canvas {
 		toggleSpinner(document.getElementById("submitAddPlayerButton"), spinnerEnabled);
 		toggleSpinner(document.getElementById("submitAddCommentButton"), spinnerEnabled);
 		toggleSpinner(document.getElementById("removePlayerButton"), spinnerEnabled);
+		toggleSpinner(document.getElementById("prevDayLink"), spinnerEnabled); // Use link ID
+		const nextDayLink = document.getElementById("nextDayLink"); // Use link ID
+		toggleSpinner(nextDayLink, spinnerEnabled);
+		const todayLink = document.getElementById("todayLink"); // Use link ID
+		toggleSpinner(todayLink, spinnerEnabled);
+		if (!spinnerEnabled) { // After loading, re-evaluate nextDayButton's disabled state
+            // Call updateDateControls to correctly set the state of all date-sensitive controls
+			// after they've been re-enabled by toggleSpinner.
+			updateDateControls();
+        }
 	}
+
+
 
 	function toggleSpinner(toButton, spinnerEnabled) {
 		while (toButton.lastElementChild) {
@@ -457,8 +513,8 @@ canvas {
 
 	async function submitAddPlayer () {
 		// Handle clicking on "submit" button
-		const playerName = document.getElementById("playerNameInput").value.trim();
-		let comment = document.getElementById("playerCommentInput").value.trim();
+	const playerName = sanitizeHtml(document.getElementById("playerNameInput").value.trim());
+		let comment = sanitizeHtml(document.getElementById("playerCommentInput").value.trim());
 		// Initialize minPlayers as an integer from the input field, default to 0 if parsing fails or input is invalid
 		let minPlayers = parseInt(document.getElementById("playerMinCountInput").value);
 		if (isNaN(minPlayers) || minPlayers < 0) { // Ensure it's a valid non-negative number
@@ -489,8 +545,8 @@ canvas {
 	}
 
 	async function submitAddComment() {
-		const commenterName = document.getElementById("playerNameInput").value.trim();
-		const commentText = document.getElementById("playerCommentInput").value.trim();
+		const commenterName = sanitizeHtml(document.getElementById("playerNameInput").value.trim());
+		const commentText = sanitizeHtml(document.getElementById("playerCommentInput").value.trim());
 
 		if (commenterName === "" || commentText === "") {
 			alert("Please enter your name (in Name field) and the comment (in Comments field).");
@@ -543,11 +599,61 @@ canvas {
 		return makeRequest("GET", apiUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 	}
 
+	function updateDateControls() {
+		const viewingDateLabel = document.getElementById("viewingDateLabel");
+		const nextDayLink = document.getElementById("nextDayLink");
+		const todayLink = document.getElementById("todayLink");
+		const addPlayerButton = document.getElementById("submitAddPlayerButton");
+		const addCommentButton = document.getElementById("submitAddCommentButton");
+		const removePlayerButton = document.getElementById("removePlayerButton");
+
+		viewingDateLabel.innerText = `Viewing: ${formatDateForDisplay(currentViewDate)}`;
+		const isCurrentDay = isToday(currentViewDate);
+
+		// Date navigation controls
+		nextDayLink.disabled = isCurrentDay; // Disable next day link if viewing today
+		todayLink.style.display = isCurrentDay ? 'none' : 'inline'; // Hide "Today" link if viewing today
+
+		// Action buttons (Add, Comment, Remove)
+		addPlayerButton.disabled = !isCurrentDay;
+		addCommentButton.disabled = !isCurrentDay;
+		removePlayerButton.disabled = !isCurrentDay;
+	}
+
+	async function handlePrevDay() {
+		currentViewDate.setDate(currentViewDate.getDate() - 1);
+		updateDateControls();
+		// No need to await here, refreshCountTable will handle loading state
+		await refreshCountTable();
+	}
+
+	async function handleNextDay() {
+		// Check if next day link is disabled (i.e., we are already viewing today)
+		if (document.getElementById("nextDayLink").disabled) return;
+		if (!isToday(currentViewDate)) {
+			currentViewDate.setDate(currentViewDate.getDate() + 1);
+			updateDateControls();
+			await refreshCountTable();
+		}
+	}
+
+	async function handleToday() {
+		currentViewDate = new Date(); // Reset to today
+		updateDateControls();
+		await refreshCountTable();
+	}
 
 	async function refreshCountTable() {
-		const refreshButton = document.getElementById("refreshTableButton");
-		const playerData = await getPlayerData();
-		updatePlayerCountTable(playerData);
+		toggleSpinners(true);
+		try {
+			const playerData = await getPlayerData(); // Uses global currentViewDate
+			updatePlayerCountTable(playerData);
+		} catch (error) {
+			console.error("Error refreshing count table:", error);
+			alert("Failed to load data for the selected date. Please try again.");
+		} finally {
+			toggleSpinners(false);
+		}
 	}
 
 	function shuffle(array) {
@@ -592,6 +698,7 @@ canvas {
    // On load, startup page
     window.addEventListener('load', (event) => {
         buildCarousel();
+		updateDateControls(); // Initialize date display and button states
         refreshCountTable();
     });
 

@@ -588,6 +588,10 @@ canvas {
 		let apiUrl = `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=${field1Value}&field2=${name}&field3=${comment}`;
 		if (field1Value === 1) { // Only add field5 if it's a player
 			apiUrl += `&field5=${minPlayersValue}`;
+			const now = new Date();
+			const noon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
+			const minutesBeforeNoon = Math.round((noon.getTime() - now.getTime()) / 60000);
+			apiUrl += `&field6=${minutesBeforeNoon}`;
 		}
 		return makeRequest("GET", apiUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 
@@ -675,7 +679,7 @@ canvas {
 		const carouselParent = document.getElementById("carouselItems");
 
 		let imgNums = [];
-		for (let i = 31; i<=46; i++) {
+		for (let i = 1; i<=58; i++) {
 			imgNums.push(i);
 		}
 		imgNums = shuffle(imgNums);
@@ -782,7 +786,7 @@ canvas {
 
 // Function to process entries
 function countPlayers(entries) {
-    const playerOccurrences = {};
+    const playerStats = {}; // Change to store stats object
 
     // Group entries by date
     const groupedByDate = entries.reduce((acc, entry) => {
@@ -795,17 +799,28 @@ function countPlayers(entries) {
     // Process each day's entries
     for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
         const dailyPlayerList = []; // Stores player names for the current day
+        const dailyPlayerField6 = {}; // Stores field6 for players on this day
 
         dailyEntries.forEach(entry => {
             const opType = parseInt(entry.field1);
             const nameField = entry.field2 ? entry.field2.toLowerCase() : null;
             const indexToRemove = entry.field4 ? parseInt(entry.field4) : null; // 1-based index
+            const field6Value = entry.field6 ? parseInt(entry.field6) : 0; // Get field6 value
 
             if (opType === 1) { // Add player
-                if (nameField) dailyPlayerList.push(nameField);
+                if (nameField) {
+                    dailyPlayerList.push(nameField);
+                    // Store field6 for this player for this day
+                    dailyPlayerField6[nameField] = (dailyPlayerField6[nameField] || 0) + field6Value;
+                }
             } else if (opType === -1) { // Remove player
                 if (indexToRemove && indexToRemove > 0 && indexToRemove <= dailyPlayerList.length) {
-                    dailyPlayerList.splice(indexToRemove - 1, 1);
+                    const removedPlayer = dailyPlayerList.splice(indexToRemove - 1, 1)[0];
+                    // If a player is removed, their field6 contribution for this day should also be removed
+                    // This is tricky. For simplicity, I'll assume field6 is associated with the *addition*
+                    // and not try to "undo" it if the player is removed later in the same day's log.
+                    // If a player is added and then removed on the same day, they still "played" for that day.
+                    // The current logic counts unique players per day.
                 }
             }
             // opType 2 (add comment) and -2 (remove comment) are ignored for player stats
@@ -815,27 +830,31 @@ function countPlayers(entries) {
         const dailyUniquePlayers = new Set(dailyPlayerList);
         dailyUniquePlayers.forEach(player => {
             if (player) { // Ensure player is not null or empty
-                playerOccurrences[player] = (playerOccurrences[player] || 0) + 1;
+                if (!playerStats[player]) {
+                    playerStats[player] = { count: 0, totalField6: 0 };
+                }
+                playerStats[player].count += 1;
+                playerStats[player].totalField6 += dailyPlayerField6[player] || 0; // Add field6 for this day
             }
         });
     }
-    return playerOccurrences;
+    return playerStats;
 }
 
 
        
 // Function to update the list
-function updateList(playerCounts) {
+function updateList(playerStats) { // Renamed playerCounts to playerStats
     // Sort and get top 20 players
-    const sortedPlayers = Object.entries(playerCounts)
-        .sort((a, b) => b[1] - a[1])
+    const sortedPlayers = Object.entries(playerStats)
+        .sort((a, b) => b[1].count - a[1].count) // Sort by count
         .slice(0, 20); // Get top 20 players
 
     // Update the HTML list
     const listContainer = document.getElementById('topPlayersList');
     listContainer.innerHTML = ''; // Clear existing list
 
-    sortedPlayers.forEach(([playerName, count], index) => {
+    sortedPlayers.forEach(([playerName, stats], index) => { // Destructure to get stats object
         const capitalizedPlayerName = playerName.charAt(0).toUpperCase() + playerName.slice(1);
         const listItem = document.createElement('li');
 
@@ -845,12 +864,20 @@ function updateList(playerCounts) {
 
         // Create count column
         const countSpan = document.createElement('span');
-        countSpan.textContent = count;
+        countSpan.textContent = stats.count; // Use stats.count
         countSpan.classList.add('count');
+
+        // Create field6 total span
+        const field6Span = document.createElement('span');
+        field6Span.textContent = ` (${stats.totalField6})`; // Display totalField6
+        field6Span.style.color = 'lightgrey'; // Set color to light grey
+        field6Span.style.fontSize = '0.8em'; // Make it slightly smaller
+        field6Span.style.marginLeft = '5px'; // Add some margin
 
         // Append spans to the list item
         listItem.appendChild(nameSpan);
         listItem.appendChild(countSpan);
+        listItem.appendChild(field6Span); // Append field6 span
 
         // Add list item to the container
         listContainer.appendChild(listItem);

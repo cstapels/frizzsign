@@ -26,32 +26,42 @@ canvas {
     max-width: 400px;
 }
 
-	.top-players-list {
-        list-style-type: none; /* Removes bullets */
-        padding: 0;           /* Removes padding */
-        margin: 0;            /* Removes margin */
-	width: 40%
-    }
-
-    .top-players-list li {
-        display: flex;        /* Enables flexible layout */
-        justify-content: space-between; /* Spreads columns evenly */
-        padding: 1px 0;      /* Adds spacing between items */
-        border-bottom: 1px solid #ccc; /* Adds a line below each item */
-    }
-
-    .top-players-list li:last-child {
-        border-bottom: none; /* Removes the line below the last item */
-    }
-
-    .top-players-list li span {
-        flex: 1;             /* Ensures columns take equal width */
-        text-align: left;    /* Aligns text to the left */
-    }
-
-    .top-players-list li span.count {
-        flex: 0.3;           /* Adjusts the width of the count column */
-    }
+.top-players-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    width: 40%;
+}
+ 
+.top-players-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 1px 0;
+    border-bottom: 1px solid #ccc;
+}
+ 
+.top-players-list li:last-child {
+    border-bottom: none;
+}
+ 
+.top-players-list li span {
+    flex: 1;
+    text-align: left;
+}
+ 
+.top-players-list li span.count {
+    flex: 0.3;
+}
+ 
+.top-players-list li span.avg-rank {
+    flex: 0.5;
+    text-align: left;
+}
+ 
+.top-players-list li.list-header {
+    font-weight: bold;
+    border-bottom: 2px solid #999;
+}
 		
     </style>
 	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -588,10 +598,9 @@ canvas {
 		let apiUrl = `https://api.thingspeak.com/update.json?api_key=${API_KEY}&field1=${field1Value}&field2=${name}&field3=${comment}`;
 		if (field1Value === 1) { // Only add field5 if it's a player
 			apiUrl += `&field5=${minPlayersValue}`;
-			const now = new Date();
-			const noon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
-			const minutesBeforeNoon = Math.round((noon.getTime() - now.getTime()) / 60000);
-			apiUrl += `&field6=${minutesBeforeNoon}`;
+			const playerData = await getPlayerData();
+			const rank = playerData.filter(p => p.Type === 'player').length + 1;
+			apiUrl += `&field6=${rank}`;
 		}
 		return makeRequest("GET", apiUrl, 'Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 
@@ -784,102 +793,123 @@ canvas {
 
        
 
-// Function to process entries
+// DROP-IN REPLACEMENT for the countPlayers() function in your HTML file.
+//
+// Change from original:
+//   Rank is always computed from the player's position in that day's running list.
+//   field6 is ignored entirely — this gives consistent results across all historical
+//   and future data without relying on the stored value.
+//
+// No other functions need to change.
+ 
 function countPlayers(entries) {
-    const playerStats = {}; // Change to store stats object
-
+    const playerStats = {};
+ 
     // Group entries by date
     const groupedByDate = entries.reduce((acc, entry) => {
-        const date = entry.created_at.split('T')[0]; // Get the date part
+        const date = entry.created_at.split('T')[0];
         if (!acc[date]) acc[date] = [];
         acc[date].push(entry);
         return acc;
     }, {});
-
+ 
     // Process each day's entries
     for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
-        const dailyPlayerList = []; // Stores player names for the current day
-        const dailyPlayerField6 = {}; // Stores field6 for players on this day
-
+        const dailyPlayerList = [];       // Running list of players as they signed up
+        const dailyPlayerRanks = {};      // name -> rank at signup for this day
+ 
         dailyEntries.forEach(entry => {
-            const opType = parseInt(entry.field1);
+            const opType    = parseInt(entry.field1);
             const nameField = entry.field2 ? entry.field2.toLowerCase() : null;
-            const indexToRemove = entry.field4 ? parseInt(entry.field4) : null; // 1-based index
-            const field6Value = entry.field6 ? parseInt(entry.field6) : 0; // Get field6 value
-
+            const indexToRemove = entry.field4 ? parseInt(entry.field4) : null;
+ 
             if (opType === 1) { // Add player
                 if (nameField) {
+                    // Always derive rank from position in the running list — never use field6
+                    const rankToUse = dailyPlayerList.length + 1;
+ 
                     dailyPlayerList.push(nameField);
-                    // Store field6 for this player for this day
-                    dailyPlayerField6[nameField] = (dailyPlayerField6[nameField] || 0) + field6Value;
+ 
+                    // If a player signed up multiple times in one day, keep the first rank
+                    if (!(nameField in dailyPlayerRanks)) {
+                        dailyPlayerRanks[nameField] = rankToUse;
+                    }
                 }
             } else if (opType === -1) { // Remove player
                 if (indexToRemove && indexToRemove > 0 && indexToRemove <= dailyPlayerList.length) {
-                    const removedPlayer = dailyPlayerList.splice(indexToRemove - 1, 1)[0];
-                    // If a player is removed, their field6 contribution for this day should also be removed
-                    // This is tricky. For simplicity, I'll assume field6 is associated with the *addition*
-                    // and not try to "undo" it if the player is removed later in the same day's log.
-                    // If a player is added and then removed on the same day, they still "played" for that day.
-                    // The current logic counts unique players per day.
+                    const removedName = dailyPlayerList.splice(indexToRemove - 1, 1)[0];
+                    // Remove their rank record so they don't skew the average for this day
+                    delete dailyPlayerRanks[removedName];
                 }
             }
-            // opType 2 (add comment) and -2 (remove comment) are ignored for player stats
+            // opType 2 / -2 (comments) are ignored
         });
-
-        // Count unique players for the day (each player counted once per day they played)
+ 
+        // Accumulate stats for each player who finished the day on the list
         const dailyUniquePlayers = new Set(dailyPlayerList);
         dailyUniquePlayers.forEach(player => {
-            if (player) { // Ensure player is not null or empty
+            if (player) {
                 if (!playerStats[player]) {
                     playerStats[player] = { count: 0, totalField6: 0 };
                 }
-                playerStats[player].count += 1;
-                playerStats[player].totalField6 += dailyPlayerField6[player] || 0; // Add field6 for this day
+                playerStats[player].count      += 1;
+                playerStats[player].totalField6 += dailyPlayerRanks[player] || 0;
             }
         });
     }
+ 
     return playerStats;
 }
 
-
        
 // Function to update the list
-function updateList(playerStats) { // Renamed playerCounts to playerStats
-    // Sort and get top 20 players
+function updateList(playerStats) {
     const sortedPlayers = Object.entries(playerStats)
-        .sort((a, b) => b[1].count - a[1].count) // Sort by count
-        .slice(0, 20); // Get top 20 players
-
-    // Update the HTML list
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 20);
+ 
     const listContainer = document.getElementById('topPlayersList');
-    listContainer.innerHTML = ''; // Clear existing list
-
-    sortedPlayers.forEach(([playerName, stats], index) => { // Destructure to get stats object
+    listContainer.innerHTML = '';
+ 
+    // Header row
+    const headerItem = document.createElement('li');
+    headerItem.classList.add('list-header');
+ 
+    const headerName = document.createElement('span');
+    headerName.textContent = 'Player';
+ 
+    const headerCount = document.createElement('span');
+    headerCount.textContent = 'Days';
+    headerCount.classList.add('count');
+ 
+    const headerRank = document.createElement('span');
+    headerRank.textContent = 'Avg Rank';
+    headerRank.classList.add('avg-rank');
+ 
+    headerItem.appendChild(headerName);
+    headerItem.appendChild(headerCount);
+    headerItem.appendChild(headerRank);
+    listContainer.appendChild(headerItem);
+ 
+    // Data rows
+    sortedPlayers.forEach(([playerName, stats]) => {
         const capitalizedPlayerName = playerName.charAt(0).toUpperCase() + playerName.slice(1);
         const listItem = document.createElement('li');
-
-        // Create name column
+ 
         const nameSpan = document.createElement('span');
         nameSpan.textContent = capitalizedPlayerName;
-
-        // Create count column
+ 
         const countSpan = document.createElement('span');
-        countSpan.textContent = stats.count; // Use stats.count
+        countSpan.textContent = stats.count;
         countSpan.classList.add('count');
-
-        // Create field6 total span
-        const field6Span = document.createElement('span');
-        field6Span.textContent = ` (${stats.totalField6})`; // Display totalField6
-        field6Span.style.color = 'lightgrey'; // Set color to light grey
-        field6Span.style.fontSize = '0.8em'; // Make it slightly smaller
-        field6Span.style.marginLeft = '5px'; // Add some margin
-
-        // Append spans to the list item
+ 
+        const avgRankSpan = document.createElement('span');
+        avgRankSpan.textContent = stats.count > 0 ? (stats.totalField6 / stats.count).toFixed(1) : '-';
+        avgRankSpan.classList.add('avg-rank');
+ 
         listItem.appendChild(nameSpan);
         listItem.appendChild(countSpan);
-        listItem.appendChild(field6Span); // Append field6 span
-
-        // Add list item to the container
+        listItem.appendChild(avgRankSpan);
         listContainer.appendChild(listItem);
     });
 }

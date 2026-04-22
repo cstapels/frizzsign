@@ -30,13 +30,15 @@ canvas {
     list-style-type: none;
     padding: 0;
     margin: 0;
-    width: 40%;
+    width: 100%;
+    max-width: 500px;
 }
  
 .top-players-list li {
     display: flex;
     justify-content: space-between;
-    padding: 1px 0;
+    align-items: center;
+    padding: 8px 12px;
     border-bottom: 1px solid #ccc;
 }
  
@@ -50,7 +52,8 @@ canvas {
 }
  
 .top-players-list li span.count {
-    flex: 0.3;
+    flex: 0.4;
+    text-align: left;
 }
  
 .top-players-list li span.avg-rank {
@@ -61,8 +64,22 @@ canvas {
 .top-players-list li.list-header {
     font-weight: bold;
     border-bottom: 2px solid #999;
+    background-color: #f5f5f5;
+    padding: 10px 12px;
 }
-		
+ 
+.top-players-list li.list-header span {
+    cursor: pointer;
+    user-select: none;
+}
+ 
+.top-players-list li.list-header span:hover {
+    text-decoration: underline;
+}
+ 
+.top-players-list li:not(.list-header):hover {
+    background-color: #fafafa;
+}		
     </style>
 	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	</head>
@@ -757,6 +774,10 @@ canvas {
     </script>
 	
 	    <script>
+let currentSortKey = 'count';   // 'name' | 'count' | 'avgRank'
+let currentSortAsc = false;     // false = descending (default: most days first)
+let cachedPlayerStats = null;   // cache so re-sort doesn't need a refetch
+ 
         let playerChart;
 
         // Function to fetch data based on user selection
@@ -793,14 +814,6 @@ canvas {
 
        
 
-// DROP-IN REPLACEMENT for the countPlayers() function in your HTML file.
-//
-// Change from original:
-//   Rank is always computed from the player's position in that day's running list.
-//   field6 is ignored entirely — this gives consistent results across all historical
-//   and future data without relying on the stored value.
-//
-// No other functions need to change.
  
 function countPlayers(entries) {
     const playerStats = {};
@@ -862,12 +875,27 @@ function countPlayers(entries) {
 }
 
        
-// Function to update the list
-function updateList(playerStats) {
-    const sortedPlayers = Object.entries(playerStats)
-        .sort((a, b) => b[1].count - a[1].count)
+function getSortedPlayers(playerStats) {
+    return Object.entries(playerStats)
+        .sort((a, b) => {
+            if (currentSortKey === 'name') {
+                return currentSortAsc
+                    ? a[0].localeCompare(b[0])
+                    : b[0].localeCompare(a[0]);
+            }
+            const valA = currentSortKey === 'count'
+                ? a[1].count
+                : (a[1].count > 0 ? a[1].totalField6 / a[1].count : Infinity);
+            const valB = currentSortKey === 'count'
+                ? b[1].count
+                : (b[1].count > 0 ? b[1].totalField6 / b[1].count : Infinity);
+            return currentSortAsc ? valA - valB : valB - valA;
+        })
         .slice(0, 20);
+}
  
+function renderList(playerStats) {
+    const sortedPlayers = getSortedPlayers(playerStats);
     const listContainer = document.getElementById('topPlayersList');
     listContainer.innerHTML = '';
  
@@ -875,36 +903,46 @@ function updateList(playerStats) {
     const headerItem = document.createElement('li');
     headerItem.classList.add('list-header');
  
-    const headerName = document.createElement('span');
-    headerName.textContent = 'Player';
+    function makeHeader(label, key, extraClass) {
+        const span = document.createElement('span');
+        const isActive = currentSortKey === key;
+        const arrow = isActive ? (currentSortAsc ? ' ▲' : ' ▼') : ' ⇅';
+        span.textContent = label + arrow;
+        if (extraClass) span.classList.add(extraClass);
+        span.addEventListener('click', () => {
+            if (currentSortKey === key) {
+                currentSortAsc = !currentSortAsc;
+            } else {
+                currentSortKey = key;
+                // Sensible defaults: name A→Z, numbers high→low
+                currentSortAsc = key === 'name';
+            }
+            renderList(cachedPlayerStats);
+        });
+        return span;
+    }
  
-    const headerCount = document.createElement('span');
-    headerCount.textContent = 'Days';
-    headerCount.classList.add('count');
- 
-    const headerRank = document.createElement('span');
-    headerRank.textContent = 'Avg Rank';
-    headerRank.classList.add('avg-rank');
- 
-    headerItem.appendChild(headerName);
-    headerItem.appendChild(headerCount);
-    headerItem.appendChild(headerRank);
+    headerItem.appendChild(makeHeader('Player',   'name',    null));
+    headerItem.appendChild(makeHeader('Days',     'count',   'count'));
+    headerItem.appendChild(makeHeader('Avg Rank', 'avgRank', 'avg-rank'));
     listContainer.appendChild(headerItem);
  
     // Data rows
     sortedPlayers.forEach(([playerName, stats]) => {
-        const capitalizedPlayerName = playerName.charAt(0).toUpperCase() + playerName.slice(1);
+        const capitalized = playerName.charAt(0).toUpperCase() + playerName.slice(1);
         const listItem = document.createElement('li');
  
         const nameSpan = document.createElement('span');
-        nameSpan.textContent = capitalizedPlayerName;
+        nameSpan.textContent = capitalized;
  
         const countSpan = document.createElement('span');
         countSpan.textContent = stats.count;
         countSpan.classList.add('count');
  
         const avgRankSpan = document.createElement('span');
-        avgRankSpan.textContent = stats.count > 0 ? (stats.totalField6 / stats.count).toFixed(1) : '-';
+        avgRankSpan.textContent = stats.count > 0
+            ? (stats.totalField6 / stats.count).toFixed(1)
+            : '-';
         avgRankSpan.classList.add('avg-rank');
  
         listItem.appendChild(nameSpan);
@@ -913,7 +951,11 @@ function updateList(playerStats) {
         listContainer.appendChild(listItem);
     });
 }
-
+ 
+function updateList(playerStats) {
+    cachedPlayerStats = playerStats;
+    renderList(playerStats);
+}
 // Function to fetch data based on user selection
 function fetchData() {
     const daysSelector = document.getElementById("daysSelector");

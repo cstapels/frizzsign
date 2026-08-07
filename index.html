@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 	<head>
@@ -61,6 +60,11 @@ canvas {
     text-align: left;
 }
  
+.top-players-list li span.score {
+    flex: 0.5;
+    text-align: left;
+}
+ 
 .top-players-list li.list-header {
     font-weight: bold;
     border-bottom: 2px solid #999;
@@ -112,10 +116,10 @@ canvas {
 		</div>
  
 
-		 <div class ="alert alert-warning" role="alert"> 
+		<!-- <div class ="alert alert-warning" role="alert"> 
 		 	2026 Cognex Ultimate Tournament! <b> June 8th - June 12th , 2026</b> 
             <br> 
-           <!-- <a href="https://forms.cloud.microsoft/r/AYJ8VNk1U9">Sign up here!</a>-->
+           <a href="https://forms.cloud.microsoft/r/AYJ8VNk1U9">Sign up here!</a>
 		 	<table> 
 		 	<tr><td width=150px> 
 		 	<a href="rules.html">2026 Rules</a> 
@@ -129,7 +133,7 @@ canvas {
 		 	</tr> 
 		 	</table> 
 		 </div> 
-	
+	-->
 
 		<!-- Sign up form fields and buttons -->
 		<div class="row">
@@ -212,6 +216,7 @@ canvas {
 				</table>
 				<button id="refreshTableButton" type="button" class="btn btn-secondary me-2 mb-2" onclick="refreshCountTable()">Refresh</button>
 				<label id="lastUpdatedLabel" for="refreshTableButton" class="me-auto mb-2">Last updated: never</label>
+				<div id="topRankButtonsContainer" class="mb-3"></div>
 			</div>
 			<div class="col-md-4 p-2">
 				<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
@@ -241,7 +246,7 @@ canvas {
     <select id="daysSelector" onchange="fetchData()">
         <option value="7">7 Days</option>
         <option value="14">14 Days</option>
-		<option value="30">30 Days</option>
+		<option value="30" selected>30 Days</option>
         <option value="90">90 Days</option>
         <option value="all">All (since Sep 2, 2023)</option>
     </select>
@@ -647,6 +652,11 @@ canvas {
 		addPlayerButton.disabled = !isCurrentDay;
 		addCommentButton.disabled = !isCurrentDay;
 		removePlayerButton.disabled = !isCurrentDay;
+
+		// Re-render top-rank quick sign-up buttons so their enabled state matches the viewed date
+		if (typeof renderTopRankButtons === 'function' && cachedTopRankStats) {
+			renderTopRankButtons(cachedTopRankStats);
+		}
 	}
 
 	async function handlePrevDay() {
@@ -729,6 +739,7 @@ canvas {
         buildCarousel();
 		updateDateControls(); // Initialize date display and button states
         refreshCountTable();
+        fetchTopRankButtonsData(); // Populate the top-rank quick sign-up buttons (always based on 30 days)
     });
 
 </script>
@@ -774,9 +785,10 @@ canvas {
     </script>
 	
 	    <script>
-let currentSortKey = 'count';   // 'name' | 'count' | 'avgRank'
-let currentSortAsc = false;     // false = descending (default: most days first)
+let currentSortKey = 'score';   // 'name' | 'count' | 'avgRank' | 'score'
+let currentSortAsc = false;     // false = descending (default: highest score first)
 let cachedPlayerStats = null;   // cache so re-sort doesn't need a refetch
+let cachedTopRankStats = null;  // cache of fixed 30-day stats used for the top-rank sign-up buttons
  
         let playerChart;
 
@@ -815,6 +827,23 @@ let cachedPlayerStats = null;   // cache so re-sort doesn't need a refetch
        
 
  
+function safeDecodeURIComponent(str) {
+    try {
+        return decodeURIComponent(str);
+    } catch (e) {
+        // Fall back to the raw string if it isn't validly percent-encoded
+        return str;
+    }
+}
+
+function unescapeHtml(str) {
+    // Reverses sanitizeHtml()'s entity encoding (&amp; &lt; &gt; &quot; &#039;)
+    const map = {
+        '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#039;': "'"
+    };
+    return str.replace(/&amp;|&lt;|&gt;|&quot;|&#039;/g, m => map[m]);
+}
+ 
 function countPlayers(entries) {
     const playerStats = {};
  
@@ -833,7 +862,7 @@ function countPlayers(entries) {
  
         dailyEntries.forEach(entry => {
             const opType    = parseInt(entry.field1);
-            const nameField = entry.field2 ? entry.field2.toLowerCase() : null;
+            const nameField = entry.field2 ? unescapeHtml(safeDecodeURIComponent(entry.field2)).toLowerCase() : null;
             const indexToRemove = entry.field4 ? parseInt(entry.field4) : null;
  
             if (opType === 1) { // Add player
@@ -883,12 +912,14 @@ function getSortedPlayers(playerStats) {
                     ? a[0].localeCompare(b[0])
                     : b[0].localeCompare(a[0]);
             }
-            const valA = currentSortKey === 'count'
-                ? a[1].count
-                : (a[1].count > 0 ? a[1].totalField6 / a[1].count : Infinity);
-            const valB = currentSortKey === 'count'
-                ? b[1].count
-                : (b[1].count > 0 ? b[1].totalField6 / b[1].count : Infinity);
+            const getVal = (stats) => {
+                const avgRank = stats.count > 0 ? stats.totalField6 / stats.count : Infinity;
+                if (currentSortKey === 'count') return stats.count;
+                if (currentSortKey === 'score') return avgRank > 0 ? stats.count / avgRank : 0;
+                return avgRank; // avgRank
+            };
+            const valA = getVal(a[1]);
+            const valB = getVal(b[1]);
             return currentSortAsc ? valA - valB : valB - valA;
         })
         .slice(0, 20);
@@ -925,6 +956,7 @@ function renderList(playerStats) {
     headerItem.appendChild(makeHeader('Player',   'name',    null));
     headerItem.appendChild(makeHeader('Days',     'count',   'count'));
     headerItem.appendChild(makeHeader('Avg Rank', 'avgRank', 'avg-rank'));
+    headerItem.appendChild(makeHeader('Score',    'score',   'score'));
     listContainer.appendChild(headerItem);
  
     // Data rows
@@ -939,15 +971,23 @@ function renderList(playerStats) {
         countSpan.textContent = stats.count;
         countSpan.classList.add('count');
  
+        const avgRank = stats.count > 0 ? stats.totalField6 / stats.count : 0;
         const avgRankSpan = document.createElement('span');
         avgRankSpan.textContent = stats.count > 0
-            ? (stats.totalField6 / stats.count).toFixed(1)
+            ? avgRank.toFixed(1)
             : '-';
         avgRankSpan.classList.add('avg-rank');
+ 
+        const scoreSpan = document.createElement('span');
+        scoreSpan.textContent = (stats.count > 0 && avgRank > 0)
+            ? (stats.count / avgRank).toFixed(2)
+            : '-';
+        scoreSpan.classList.add('score');
  
         listItem.appendChild(nameSpan);
         listItem.appendChild(countSpan);
         listItem.appendChild(avgRankSpan);
+        listItem.appendChild(scoreSpan);
         listContainer.appendChild(listItem);
     });
 }
@@ -955,6 +995,86 @@ function renderList(playerStats) {
 function updateList(playerStats) {
     cachedPlayerStats = playerStats;
     renderList(playerStats);
+}
+
+function getTopScorers(playerStats, n) {
+    return Object.entries(playerStats)
+        .map(([name, stats]) => {
+            const avgRank = stats.count > 0 ? stats.totalField6 / stats.count : Infinity;
+            const score = (stats.count > 0 && avgRank > 0) ? stats.count / avgRank : 0;
+            return { name, stats, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, n);
+}
+
+async function signUpTopRankPlayer(playerName, rank, buttonEl) {
+    buttonEl.disabled = true;
+    const originalText = buttonEl.textContent;
+    buttonEl.textContent = 'Signing up...';
+    try {
+        const capitalized = playerName.charAt(0).toUpperCase() + playerName.slice(1);
+        const safeName = sanitizeHtml(capitalized);
+        const comment = sanitizeHtml(`Top Rank ${rank}`);
+        await addPlayerOrComment(safeName, comment, 1, 6);
+        buttonEl.textContent = 'Signed up \u2713';
+        // Refresh the daily signup table so the new entry shows up immediately
+        refreshCountTable();
+        fetchTopRankButtonsData();
+    } catch (err) {
+        console.error('Failed to sign up top rank player:', err);
+        alert(`Failed to sign up ${playerName}. Please try again.`);
+        buttonEl.disabled = false;
+        buttonEl.textContent = originalText;
+    }
+}
+
+async function fetchTopRankButtonsData() {
+    try {
+        const url = `https://api.thingspeak.com/channels/${PLAYER_CHANNEL_ID}/feed.json?days=30`;
+        const responseText = await makeRequest('GET', url);
+        const response = JSON.parse(responseText);
+        const playerCounts = countPlayers(response.feeds);
+        cachedTopRankStats = playerCounts;
+        renderTopRankButtons(playerCounts);
+    } catch (err) {
+        console.error('Failed to load top-rank button data:', err);
+    }
+}
+
+function renderTopRankButtons(playerStats) {
+    const container = document.getElementById('topRankButtonsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const topScorers = getTopScorers(playerStats, 4);
+    if (topScorers.length === 0) return;
+
+    const canSignUp = isToday(currentViewDate);
+
+    const label = document.createElement('div');
+    label.classList.add('mb-2', 'fw-bold');
+    label.textContent = 'Quick Sign-Up: Top 4 Ranked Players (30 Days)';
+    container.appendChild(label);
+
+    if (!canSignUp) {
+        const notice = document.createElement('div');
+        notice.classList.add('text-muted', 'mb-2');
+        notice.textContent = "Sign-up is only available while viewing today's roster.";
+        container.appendChild(notice);
+    }
+
+    topScorers.forEach((entry, idx) => {
+        const rank = idx + 1;
+        const capitalized = entry.name.charAt(0).toUpperCase() + entry.name.slice(1);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add('btn', 'btn-outline-primary', 'me-2', 'mb-2');
+        button.textContent = `Sign Up ${capitalized} (Rank ${rank})`;
+        button.disabled = !canSignUp;
+        button.addEventListener('click', () => signUpTopRankPlayer(entry.name, rank, button));
+        container.appendChild(button);
+    });
 }
 // Function to fetch data based on user selection
 function fetchData() {

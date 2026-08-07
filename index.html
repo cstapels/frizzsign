@@ -47,22 +47,22 @@ canvas {
  
 .top-players-list li span {
     flex: 1;
-    text-align: left;
+    text-align: center;
 }
  
 .top-players-list li span.count {
     flex: 0.4;
-    text-align: left;
+    text-align: center;
 }
  
 .top-players-list li span.avg-rank {
     flex: 0.5;
-    text-align: left;
+    text-align: center;
 }
  
 .top-players-list li span.score {
     flex: 0.5;
-    text-align: left;
+    text-align: center;
 }
  
 .top-players-list li.list-header {
@@ -937,7 +937,7 @@ function renderList(playerStats) {
     function makeHeader(label, key, extraClass) {
         const span = document.createElement('span');
         const isActive = currentSortKey === key;
-        const arrow = isActive ? (currentSortAsc ? ' ▲' : ' ▼') : ' ⇅';
+        const arrow = isActive ? (currentSortAsc ? ' ▲' : ' ▼') : ' ▲▼';
         span.textContent = label + arrow;
         if (extraClass) span.classList.add(extraClass);
         span.addEventListener('click', () => {
@@ -1070,7 +1070,7 @@ function renderTopRankButtons(playerStats) {
         const button = document.createElement('button');
         button.type = 'button';
         button.classList.add('btn', 'btn-outline-primary', 'me-2', 'mb-2');
-        button.textContent = `Sign Up ${capitalized} (Rank ${rank})`;
+        button.textContent = `Sign Up ${capitalized}`;
         button.disabled = !canSignUp;
         button.addEventListener('click', () => signUpTopRankPlayer(entry.name, rank, button));
         container.appendChild(button);

@@ -1016,7 +1016,9 @@ async function signUpTopRankPlayer(playerName, rank, buttonEl) {
         const capitalized = playerName.charAt(0).toUpperCase() + playerName.slice(1);
         const safeName = sanitizeHtml(capitalized);
         const comment = sanitizeHtml(`Top Rank ${rank}`);
-        await addPlayerOrComment(safeName, comment, 1, 6);
+        const minPlayersInput = document.getElementById('playerMinCountInput');
+        const minPlayers = minPlayersInput ? parseInt(minPlayersInput.value, 10) : 0;
+        await addPlayerOrComment(safeName, comment, 1, minPlayers);
         buttonEl.textContent = 'Signed up \u2713';
         // Refresh the daily signup table so the new entry shows up immediately
         refreshCountTable();

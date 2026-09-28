@@ -846,7 +846,7 @@ function unescapeHtml(str) {
  
 function countPlayers(entries) {
     const playerStats = {};
- 
+
     // Group entries by date
     const groupedByDate = entries.reduce((acc, entry) => {
         const date = entry.created_at.split('T')[0];
@@ -854,52 +854,82 @@ function countPlayers(entries) {
         acc[date].push(entry);
         return acc;
     }, {});
- 
+
     // Process each day's entries
     for (const [date, dailyEntries] of Object.entries(groupedByDate)) {
-        const dailyPlayerList = [];       // Running list of players as they signed up
-        const dailyPlayerRanks = {};      // name -> rank at signup for this day
- 
+        const dailyPlayerList = [];
+        const dailyPlayerRanks = {};
+
         dailyEntries.forEach(entry => {
-            const opType    = parseInt(entry.field1);
-            const nameField = entry.field2 ? unescapeHtml(safeDecodeURIComponent(entry.field2)).toLowerCase() : null;
-            const indexToRemove = entry.field4 ? parseInt(entry.field4) : null;
- 
+            const opType = parseInt(entry.field1);
+            const nameField = entry.field2
+                ? unescapeHtml(safeDecodeURIComponent(entry.field2)).toLowerCase()
+                : null;
+            const indexToRemove = entry.field4
+                ? parseInt(entry.field4)
+                : null;
+
             if (opType === 1) { // Add player
                 if (nameField) {
-                    // Always derive rank from position in the running list — never use field6
+                    // Rank is the player's position when they signed up
                     const rankToUse = dailyPlayerList.length + 1;
- 
+
                     dailyPlayerList.push(nameField);
- 
-                    // If a player signed up multiple times in one day, keep the first rank
+
+                    // Keep the first signup rank for that player on this day
                     if (!(nameField in dailyPlayerRanks)) {
                         dailyPlayerRanks[nameField] = rankToUse;
                     }
                 }
+
             } else if (opType === -1) { // Remove player
-                if (indexToRemove && indexToRemove > 0 && indexToRemove <= dailyPlayerList.length) {
-                    const removedName = dailyPlayerList.splice(indexToRemove - 1, 1)[0];
-                    // Remove their rank record so they don't skew the average for this day
+                if (
+                    indexToRemove &&
+                    indexToRemove > 0 &&
+                    indexToRemove <= dailyPlayerList.length
+                ) {
+                    const removedName =
+                        dailyPlayerList.splice(indexToRemove - 1, 1)[0];
+
+                    // Remove this player's daily rank.
+                    // They will only be counted if they subsequently
+                    // sign up again and receive a new rank.
                     delete dailyPlayerRanks[removedName];
                 }
             }
+
             // opType 2 / -2 (comments) are ignored
         });
- 
-        // Accumulate stats for each player who finished the day on the list
+
+        // Only count players who finished the day AND have a valid rank.
+        //
+        // This is important: do NOT use `|| 0` here because a missing
+        // rank would otherwise add zero to the total and produce an
+        // average rank below 1.
         const dailyUniquePlayers = new Set(dailyPlayerList);
+
         dailyUniquePlayers.forEach(player => {
-            if (player) {
-                if (!playerStats[player]) {
-                    playerStats[player] = { count: 0, totalField6: 0 };
-                }
-                playerStats[player].count      += 1;
-                playerStats[player].totalField6 += dailyPlayerRanks[player] || 0;
+            if (!player) return;
+
+            const rank = dailyPlayerRanks[player];
+
+            // A valid rank must actually exist and must be >= 1.
+            if (typeof rank !== 'number' || rank < 1) {
+                return;
             }
+
+            if (!playerStats[player]) {
+                playerStats[player] = {
+                    count: 0,
+                    totalField6: 0
+                };
+            }
+
+            playerStats[player].count += 1;
+            playerStats[player].totalField6 += rank;
         });
     }
- 
+
     return playerStats;
 }
 
